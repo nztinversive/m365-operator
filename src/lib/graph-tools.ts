@@ -332,7 +332,10 @@ export async function downloadOneDriveItem(
   const chunks: any[] = [];
   return new Promise((resolve, reject) => {
     response.on('data', (chunk: any) => chunks.push(chunk));
-    response.on('end', () => resolve(Buffer.concat(chunks)));
+    response.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
+      });
     response.on('error', reject);
   });
 }
