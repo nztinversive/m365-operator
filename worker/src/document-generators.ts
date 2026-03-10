@@ -231,5 +231,5 @@ export async function generatePowerPointPresentation(
     }
   }
 
-  return Buffer.from(await pres.writeFile({ outputType: "arraybuffer" }) as ArrayBuffer);
+  return Buffer.from(await pres.write({ outputType: "nodebuffer" }) as Buffer);
 }
