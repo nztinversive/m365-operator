@@ -5,7 +5,6 @@ export const msalConfig: Configuration = {
     clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || "",
     authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_AZURE_TENANT_ID || "common"}`,
     redirectUri: typeof window !== "undefined" ? window.location.origin : "",
-    navigateToLoginRequestUrl: false,
   },
   cache: {
     cacheLocation: "localStorage",
