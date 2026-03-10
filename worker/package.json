@@ -1,0 +1,25 @@
+{
+  "name": "m365-operator-worker",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "convex": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "docx": "^8.5.0",
+    "exceljs": "^4.4.0",
+    "pptxgenjs": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
