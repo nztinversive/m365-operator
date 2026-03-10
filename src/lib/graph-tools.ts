@@ -35,6 +35,12 @@ export interface TeamsChannel {
   membershipType: string;
 }
 
+export interface Team {
+  id: string;
+  displayName: string;
+  description?: string;
+}
+
 export interface TeamsMessage {
   id: string;
   messageType: string;
@@ -54,6 +60,21 @@ export interface DriveItem {
   file?: { mimeType: string };
   folder?: { childCount: number };
 }
+
+export interface ExcelWorksheet {
+  id?: string;
+  name: string;
+  position?: number;
+  visibility?: string;
+}
+
+export type ExcelCellValue = string | number | boolean | null;
+
+type StreamLike = {
+  on(event: "data", listener: (chunk: Buffer) => void): StreamLike;
+  on(event: "end", listener: () => void): StreamLike;
+  on(event: "error", listener: (error: Error) => void): StreamLike;
+};
 
 // Email Operations
 export async function getUnreadEmails(
@@ -198,7 +219,7 @@ export async function createCalendarEvent(
 }
 
 // Teams Operations
-export async function getJoinedTeams(client: Client): Promise<any[]> {
+export async function getJoinedTeams(client: Client): Promise<Team[]> {
   const result = await client
     .api("/me/joinedTeams")
     .select("id,displayName,description")
@@ -326,12 +347,12 @@ export async function downloadOneDriveItem(
 ): Promise<ArrayBuffer> {
   const response = await client
     .api(`/me/drive/items/${itemId}/content`)
-    .getStream();
+    .getStream() as StreamLike;
   
   // Convert stream to ArrayBuffer
-  const chunks: any[] = [];
+  const chunks: Buffer[] = [];
   return new Promise((resolve, reject) => {
-    response.on('data', (chunk: any) => chunks.push(chunk));
+    response.on("data", (chunk) => chunks.push(chunk));
     response.on('end', () => {
         const buf = Buffer.concat(chunks);
         resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
@@ -344,7 +365,7 @@ export async function downloadOneDriveItem(
 export async function getExcelWorksheets(
   client: Client,
   driveItemId: string
-): Promise<any[]> {
+): Promise<ExcelWorksheet[]> {
   const result = await client
     .api(`/me/drive/items/${driveItemId}/workbook/worksheets`)
     .get();
@@ -356,7 +377,7 @@ export async function updateExcelRange(
   driveItemId: string,
   worksheetName: string,
   range: string,
-  values: any[][]
+  values: ExcelCellValue[][]
 ): Promise<void> {
   await client
     .api(`/me/drive/items/${driveItemId}/workbook/worksheets('${worksheetName}')/range(address='${range}')`)
@@ -372,7 +393,7 @@ export async function addExcelTable(
   range: string,
   tableName: string,
   hasHeaders = true
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   return await client
     .api(`/me/drive/items/${driveItemId}/workbook/worksheets('${worksheetName}')/tables/add`)
     .post({
@@ -394,7 +415,7 @@ export async function getUserPhoto(client: Client): Promise<ArrayBuffer | null> 
   try {
     const response = await client.api("/me/photo/$value").get();
     return response;
-  } catch (error) {
+  } catch {
     // No photo available
     return null;
   }
@@ -420,9 +441,9 @@ export async function searchOneDrive(
   query: string,
   count = 25
 ): Promise<DriveItem[]> {
+  const escapedQuery = query.replace(/'/g, "''");
   const result = await client
-    .api("/me/drive/root/search(q='{searchText}')")
-    .query({ searchText: query })
+    .api(`/me/drive/root/search(q='${escapedQuery}')`)
     .top(count)
     .select("id,name,webUrl,size,lastModifiedDateTime,file,folder")
     .get();

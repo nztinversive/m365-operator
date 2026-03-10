@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { Doc, Id } from "../../convex/_generated/dataModel";
 import { useState } from "react";
 import {
   CheckCircle,
@@ -12,13 +12,30 @@ import {
   Users,
   FileText,
   AlertTriangle,
-  Eye,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 
 interface ApprovalQueueProps {
   userId: Id<"users">;
+}
+
+type ApprovalDetails = Record<string, unknown>;
+type PendingApproval = Omit<Doc<"approvals">, "details"> & {
+  details?: ApprovalDetails;
+};
+
+function getString(details: ApprovalDetails, key: string): string | undefined {
+  const value = details[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getStringArray(details: ApprovalDetails, key: string): string[] | undefined {
+  const value = details[key];
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.filter((item): item is string => typeof item === "string");
 }
 
 export function ApprovalQueue({ userId }: ApprovalQueueProps) {
@@ -84,7 +101,7 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     return `${Math.floor(diffDays)} days ago`;
   };
 
-  const renderApprovalDetails = (approval: any) => {
+  const renderApprovalDetails = (approval: PendingApproval) => {
     if (!approval.details) return null;
 
     const details = approval.details;
@@ -94,14 +111,20 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
           <h4 className="font-medium text-sm text-gray-900 mb-2">Email Preview</h4>
           <div className="space-y-2 text-xs">
-            <div><strong>To:</strong> {details.to}</div>
-            {details.cc && <div><strong>CC:</strong> {details.cc}</div>}
-            <div><strong>Subject:</strong> {details.subject}</div>
+            <div><strong>To:</strong> {getString(details, "to") || "Unknown recipient"}</div>
+            {getStringArray(details, "cc")?.length ? (
+              <div><strong>CC:</strong> {getStringArray(details, "cc")!.join(", ")}</div>
+            ) : getString(details, "cc") ? (
+              <div><strong>CC:</strong> {getString(details, "cc")}</div>
+            ) : null}
+            <div><strong>Subject:</strong> {getString(details, "subject") || "No subject"}</div>
             <div className="border-t pt-2 mt-2">
               <strong>Body:</strong>
               <div 
                 className="mt-1 text-gray-700 max-h-32 overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: details.body || details.bodyPreview }}
+                dangerouslySetInnerHTML={{
+                  __html: getString(details, "body") || getString(details, "bodyPreview") || "",
+                }}
               />
             </div>
           </div>
@@ -114,12 +137,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
           <h4 className="font-medium text-sm text-gray-900 mb-2">Teams Message Preview</h4>
           <div className="space-y-2 text-xs">
-            <div><strong>Channel:</strong> {details.channelName || details.channel}</div>
-            {details.subject && <div><strong>Subject:</strong> {details.subject}</div>}
+            <div><strong>Channel:</strong> {getString(details, "channelName") || getString(details, "channel") || "Unknown channel"}</div>
+            {getString(details, "subject") && <div><strong>Subject:</strong> {getString(details, "subject")}</div>}
             <div className="border-t pt-2 mt-2">
               <strong>Message:</strong>
               <div className="mt-1 text-gray-700 max-h-32 overflow-y-auto">
-                {details.message || details.content}
+                {getString(details, "message") || getString(details, "content")}
               </div>
             </div>
           </div>
@@ -132,13 +155,13 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
         <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
           <h4 className="font-medium text-sm text-gray-900 mb-2">Calendar Event Preview</h4>
           <div className="space-y-2 text-xs">
-            <div><strong>Title:</strong> {details.subject || details.title}</div>
-            <div><strong>Start:</strong> {new Date(details.start).toLocaleString()}</div>
-            <div><strong>End:</strong> {new Date(details.end).toLocaleString()}</div>
-            {details.attendees && (
-              <div><strong>Attendees:</strong> {details.attendees.join(", ")}</div>
+            <div><strong>Title:</strong> {getString(details, "subject") || getString(details, "title") || "Untitled event"}</div>
+            <div><strong>Start:</strong> {new Date(getString(details, "start") || "").toLocaleString()}</div>
+            <div><strong>End:</strong> {new Date(getString(details, "end") || "").toLocaleString()}</div>
+            {getStringArray(details, "attendees")?.length && (
+              <div><strong>Attendees:</strong> {getStringArray(details, "attendees")!.join(", ")}</div>
             )}
-            {details.location && <div><strong>Location:</strong> {details.location}</div>}
+            {getString(details, "location") && <div><strong>Location:</strong> {getString(details, "location")}</div>}
           </div>
         </div>
       );
@@ -152,8 +175,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
             File Overwrite Warning
           </h4>
           <div className="space-y-2 text-xs">
-            <div><strong>File:</strong> {details.fileName || details.name}</div>
-            <div><strong>Location:</strong> {details.location || details.path}</div>
+            <div><strong>File:</strong> {getString(details, "fileName") || getString(details, "name") || "Unknown file"}</div>
+            <div><strong>Location:</strong> {getString(details, "location") || getString(details, "path") || "Unknown path"}</div>
             <div className="text-yellow-700 text-xs mt-2">
               This action will replace the existing file. This cannot be undone.
             </div>
@@ -204,21 +227,23 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
       </div>
 
       <div className="space-y-3">
-        {approvals.map((approval: any) => (
+        {approvals.map((approval) => {
+          const pendingApproval = approval as PendingApproval;
+          return (
           <div
-            key={approval._id}
+            key={pendingApproval._id}
             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3 flex-1">
                 <div className="flex-shrink-0 mt-0.5 p-2 bg-yellow-100 rounded-lg">
-                  {getActionIcon(approval.action)}
+                  {getActionIcon(pendingApproval.action)}
                 </div>
                 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <h3 className="text-sm font-medium text-gray-900">
-                      {formatActionType(approval.action)}
+                      {formatActionType(pendingApproval.action)}
                     </h3>
                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
                       Approval Required
@@ -226,25 +251,25 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
                   </div>
 
                   <p className="text-sm text-gray-600 mb-2">
-                    {approval.description}
+                    {pendingApproval.description}
                   </p>
 
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
-                    <span>Requested {formatDateTime(approval.createdAt)}</span>
+                    <span>Requested {formatDateTime(pendingApproval.createdAt)}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center space-x-2 ml-4">
-                {approval.details && (
+                {pendingApproval.details && (
                   <button
                     onClick={() => setExpandedApproval(
-                      expandedApproval === approval._id ? null : approval._id
+                      expandedApproval === pendingApproval._id ? null : pendingApproval._id
                     )}
                     className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                     title="View details"
                   >
-                    {expandedApproval === approval._id ? (
+                    {expandedApproval === pendingApproval._id ? (
                       <ChevronUp className="w-4 h-4" />
                     ) : (
                       <ChevronDown className="w-4 h-4" />
@@ -254,12 +279,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               </div>
             </div>
 
-            {expandedApproval === approval._id && renderApprovalDetails(approval)}
+            {expandedApproval === pendingApproval._id && renderApprovalDetails(pendingApproval)}
 
             <div className="flex items-center justify-end space-x-2 mt-4 pt-3 border-t">
               <button
-                onClick={() => handleReject(approval._id)}
-                disabled={processingApproval === approval._id}
+                onClick={() => handleReject(pendingApproval._id)}
+                disabled={processingApproval === pendingApproval._id}
                 className="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors disabled:opacity-50"
               >
                 <XCircle className="w-4 h-4" />
@@ -267,8 +292,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               </button>
               
               <button
-                onClick={() => handleApprove(approval._id)}
-                disabled={processingApproval === approval._id}
+                onClick={() => handleApprove(pendingApproval._id)}
+                disabled={processingApproval === pendingApproval._id}
                 className="flex items-center space-x-1 px-3 py-1.5 text-sm text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors disabled:opacity-50"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -276,7 +301,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               </button>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

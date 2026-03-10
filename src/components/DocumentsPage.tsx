@@ -9,7 +9,6 @@ import {
   Presentation,
   Download,
   ExternalLink,
-  Calendar,
   Folder,
   Search,
   Filter,

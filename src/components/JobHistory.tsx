@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -14,7 +15,8 @@ import {
   Mail,
   FileText,
   Users,
-  Download
+  Download,
+  X,
 } from "lucide-react";
 
 interface JobHistoryProps {
@@ -23,6 +25,22 @@ interface JobHistoryProps {
 
 export function JobHistory({ userId }: JobHistoryProps) {
   const jobs = useQuery(api.jobs.list, { userId });
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!jobs?.some((job) => job.status === "running")) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [jobs]);
 
   if (!jobs) {
     return (
@@ -104,7 +122,7 @@ export function JobHistory({ userId }: JobHistoryProps) {
   };
 
   const calculateDuration = (createdAt: number, completedAt?: number) => {
-    const endTime = completedAt || Date.now();
+    const endTime = completedAt ?? currentTime;
     const durationMs = endTime - createdAt;
     const seconds = Math.floor(durationMs / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -127,8 +145,13 @@ export function JobHistory({ userId }: JobHistoryProps) {
     );
   }
 
+  const selectedJob = selectedJobId
+    ? jobs.find((job) => job._id === selectedJobId)
+    : null;
+
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Job History</h2>
         <span className="text-sm text-gray-500">{jobs.length} total jobs</span>
@@ -195,10 +218,7 @@ export function JobHistory({ userId }: JobHistoryProps) {
               <div className="flex items-center space-x-2 ml-4">
                 {job.output && (
                   <button
-                    onClick={() => {
-                      // TODO: Open job output details modal
-                      console.log("Job output:", job.output);
-                    }}
+                    onClick={() => setSelectedJobId(job._id)}
                     className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                     title="View output"
                   >
@@ -225,6 +245,37 @@ export function JobHistory({ userId }: JobHistoryProps) {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+
+      {selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-3xl rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {formatJobType(selectedJob.type)} Output
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Started {formatDateTime(selectedJob.createdAt)}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedJobId(null)}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                title="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-6 py-4">
+              <pre className="whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-4 text-xs text-gray-800">
+                {JSON.stringify(selectedJob.output, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

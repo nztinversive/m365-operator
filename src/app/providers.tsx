@@ -22,21 +22,20 @@ function getMsalInstance(): PublicClientApplication {
   return msalInstance;
 }
 
+function getConvexInstance(): ConvexReactClient | null {
+  if (typeof window === "undefined" || !convexUrl) {
+    return null;
+  }
+  if (!convexInstance) {
+    convexInstance = new ConvexReactClient(convexUrl);
+  }
+  return convexInstance;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   const [msalReady, setMsalReady] = useState(false);
-  const [convexReady, setConvexReady] = useState(false);
   const [pca] = useState(getMsalInstance);
-
-  useEffect(() => {
-    if (!convexUrl) {
-      return;
-    }
-
-    if (!convexInstance) {
-      convexInstance = new ConvexReactClient(convexUrl);
-    }
-    setConvexReady(true);
-  }, []);
+  const convexClient = getConvexInstance();
 
   useEffect(() => {
     pca.initialize().then(() => {
@@ -76,7 +75,7 @@ export function Providers({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!msalReady || !convexReady || !convexInstance) {
+  if (!msalReady || !convexClient) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-950 text-gray-400">
         <div className="animate-pulse">Loading...</div>
@@ -86,7 +85,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <MsalProvider instance={pca}>
-      <ConvexProvider client={convexInstance}>
+      <ConvexProvider client={convexClient}>
         {children}
       </ConvexProvider>
     </MsalProvider>
