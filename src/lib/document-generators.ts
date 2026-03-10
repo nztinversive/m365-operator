@@ -225,7 +225,7 @@ export async function generatePowerPointPresentation(
     }
   }
 
-  return Buffer.from(await pres.writeFile({ outputType: "arraybuffer" }) as ArrayBuffer);
+  return Buffer.from(await pres.writeFile({ outputType: "arraybuffer" }) as unknown as ArrayBuffer);
 }
 
 // Utility functions for generating business documents
