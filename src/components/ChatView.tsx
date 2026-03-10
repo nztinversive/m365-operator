@@ -53,8 +53,8 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
     ]);
   };
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const handleSend = async (prompt?: string) => {
+    const text = (prompt ?? input).trim();
     if (!text || isProcessing) return;
 
     setInput("");
@@ -225,10 +225,7 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
       {/* Quick Actions */}
       <div className="flex gap-2 px-4 py-2 border-b border-gray-800/50">
         <button
-          onClick={() => {
-            setInput("Summarize my unread emails");
-            handleSend();
-          }}
+          onClick={() => void handleSend("Summarize my unread emails")}
           disabled={isProcessing}
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
         >
@@ -236,10 +233,7 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
           Emails
         </button>
         <button
-          onClick={() => {
-            setInput("What's on my calendar today?");
-            handleSend();
-          }}
+          onClick={() => void handleSend("What's on my calendar today?")}
           disabled={isProcessing}
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
         >
@@ -247,10 +241,7 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
           Calendar
         </button>
         <button
-          onClick={() => {
-            setInput("Morning briefing");
-            handleSend();
-          }}
+          onClick={() => void handleSend("Morning briefing")}
           disabled={isProcessing}
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
         >
@@ -337,7 +328,7 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
             className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
           />
           <button
-            onClick={handleSend}
+            onClick={() => void handleSend()}
             disabled={isProcessing || !input.trim()}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white p-2.5 rounded-lg transition-colors"
           >

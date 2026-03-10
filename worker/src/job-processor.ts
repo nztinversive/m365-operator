@@ -1,6 +1,9 @@
 import { ConvexHttpClient } from 'convex/browser';
+import type { FunctionReference } from 'convex/server';
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { api } from '../../convex/_generated/api.js';
+import type { Id } from '../../convex/_generated/dataModel';
 import { GraphClientManager } from './graph-client-manager.js';
 import { runAgent, type AgentRunResult } from './claude-agent.js';
 import {
@@ -21,10 +24,10 @@ export interface JobProcessorConfig {
 }
 
 export interface Job {
-  _id: string;
-  userId: string;
-  conversationId?: string;
-  messageId?: string;
+  _id: Id<'jobs'>;
+  userId: Id<'users'>;
+  conversationId?: Id<'conversations'>;
+  messageId?: Id<'messages'>;
   type: string;
   status: 'queued' | 'running' | 'waiting_approval' | 'completed' | 'failed' | 'cancelled';
   input?: any;
@@ -45,8 +48,11 @@ export interface JobExecution {
 
 export class JobProcessor {
   private isRunning = false;
-  private pollingHandle?: NodeJS.Timeout;
+  private pollingHandle: NodeJS.Timeout | undefined;
   private activeJobs = new Map<string, JobExecution>();
+  private readonly getQueuedRef = api.jobs!.getQueued as unknown as FunctionReference<'query'>;
+  private readonly updateStatusRef = api.jobs!.updateStatus as unknown as FunctionReference<'mutation'>;
+  private readonly createApprovalRef = api.approvals!.create as unknown as FunctionReference<'mutation'>;
 
   constructor(
     private convex: ConvexHttpClient,
@@ -111,7 +117,7 @@ export class JobProcessor {
     if (this.activeJobs.size >= this.config.maxConcurrentJobs) return;
 
     try {
-      const queuedJobs = await this.convex.query('jobs:getQueued', {});
+      const queuedJobs = await this.convex.query(this.getQueuedRef, {});
       if (!queuedJobs?.length) return;
 
       const slots = this.config.maxConcurrentJobs - this.activeJobs.size;
@@ -264,7 +270,7 @@ export class JobProcessor {
     progressMessage?: string
   ): Promise<void> {
     try {
-      await this.convex.mutation('jobs:updateStatus', {
+      await this.convex.mutation(this.updateStatusRef, {
         id: jobId, status, output, error, progress, progressMessage,
       });
     } catch (err) {
@@ -283,7 +289,7 @@ export class JobProcessor {
     details: any
   ): Promise<void> {
     try {
-      await this.convex.mutation('approvals:create', {
+      await this.convex.mutation(this.createApprovalRef, {
         jobId, userId, action,
         description: `Approve: ${action} — ${JSON.stringify(details).substring(0, 200)}`,
         details,

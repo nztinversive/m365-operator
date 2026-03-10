@@ -8,5 +8,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXT_PUBLIC_CONVEX_URL
+        sync: false
       - key: NEXT_PUBLIC_AZURE_CLIENT_ID
         value: b7da4c60-8c46-4167-82ce-acf1c5cdf67f

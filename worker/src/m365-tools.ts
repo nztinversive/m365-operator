@@ -1,3 +1,4 @@
+import { HeadingLevel } from 'docx';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphClientManager } from './graph-client-manager.js';
 import { generateWordDocument, generateExcelWorkbook, generatePowerPointPresentation, type WordDocumentSection, type ExcelWorksheetData, type PowerPointSlide } from './document-generators.js';
@@ -193,7 +194,7 @@ export class M365Tools {
       {
         type: 'heading',
         content: 'Executive Summary',
-        level: 1,
+        level: HeadingLevel.HEADING_1,
       },
       {
         type: 'paragraph',
@@ -219,7 +220,7 @@ export class M365Tools {
       {
         type: 'heading',
         content: 'Meeting Summary',
-        level: 1,
+        level: HeadingLevel.HEADING_1,
       },
       {
         type: 'paragraph',
@@ -228,7 +229,7 @@ export class M365Tools {
       {
         type: 'heading',
         content: 'Action Items',
-        level: 1,
+        level: HeadingLevel.HEADING_1,
       },
       {
         type: 'table',

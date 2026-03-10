@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { AccountInfo } from "@azure/msal-browser";
 import { Navigation } from "./Navigation";
@@ -20,6 +20,9 @@ type ViewType = "chat" | "jobs" | "approvals" | "documents" | "settings";
 
 export function MainApp({ account, onLogout }: MainAppProps) {
   const [currentView, setCurrentView] = useState<ViewType>("chat");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [userSetupError, setUserSetupError] = useState<string | null>(null);
+  const getOrCreateUser = useMutation(api.users.getOrCreate);
 
   // Get user data
   const user = useQuery(api.users.getByEmail, { email: account.username! });
@@ -28,8 +31,53 @@ export function MainApp({ account, onLogout }: MainAppProps) {
     user ? { userId: user._id } : "skip"
   );
 
+  useEffect(() => {
+    if (user !== null || isCreatingUser || !account.username) {
+      return;
+    }
+
+    const ensureUser = async () => {
+      try {
+        setIsCreatingUser(true);
+        setUserSetupError(null);
+        await getOrCreateUser({
+          email: account.username,
+          name: account.name || account.username,
+          microsoftId: account.homeAccountId,
+        });
+      } catch (error) {
+        console.error("Failed to create user:", error);
+        setUserSetupError(
+          error instanceof Error ? error.message : "Unable to finish account setup."
+        );
+      } finally {
+        setIsCreatingUser(false);
+      }
+    };
+
+    void ensureUser();
+  }, [
+    account.homeAccountId,
+    account.name,
+    account.username,
+    getOrCreateUser,
+    isCreatingUser,
+    user,
+  ]);
+
   const renderCurrentView = () => {
-    if (!user) {
+    if (userSetupError) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-red-600 font-medium">Account setup failed</p>
+            <p className="text-gray-600 mt-2">{userSetupError}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (user === undefined || user === null || isCreatingUser) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
