@@ -10,7 +10,11 @@ const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 let msalInstance: PublicClientApplication | null = null;
 
-function getMsalInstance() {
+function getMsalInstance(): PublicClientApplication {
+  if (typeof window === "undefined") {
+    // Return a dummy during SSR — will never be used
+    return null as unknown as PublicClientApplication;
+  }
   if (!msalInstance) {
     msalInstance = new PublicClientApplication(msalConfig);
   }
