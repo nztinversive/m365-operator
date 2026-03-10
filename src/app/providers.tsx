@@ -34,6 +34,11 @@ function getConvexInstance(): ConvexReactClient | null {
 
 export function Providers({ children }: { children: ReactNode }) {
   const [msalReady, setMsalReady] = useState(false);
+  const [isPopup] = useState(() => {
+    if (typeof window === "undefined") return false;
+    // Detect if we're inside an MSAL popup window
+    return window.opener !== null && window.opener !== window;
+  });
   const [pca] = useState(getMsalInstance);
   const convexClient = getConvexInstance();
 
@@ -70,6 +75,15 @@ export function Providers({ children }: { children: ReactNode }) {
         setMsalReady(true);
       });
   }, [pca]);
+
+  // If we're in a popup, just show blank — MSAL will handle the auth and close
+  if (isPopup) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-950 text-gray-400">
+        <div className="animate-pulse">Completing sign-in...</div>
+      </div>
+    );
+  }
 
   if (!convexUrl) {
     return (
