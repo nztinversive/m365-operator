@@ -204,7 +204,7 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
       </div>
 
       <div className="space-y-3">
-        {approvals.map((approval) => (
+        {approvals.map((approval: any) => (
           <div
             key={approval._id}
             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
