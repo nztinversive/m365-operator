@@ -38,9 +38,22 @@ export function Providers({ children }: { children: ReactNode }) {
   const convexClient = getConvexInstance();
 
   useEffect(() => {
-    pca.initialize().then(() => {
-      // Handle redirect response
-      pca.handleRedirectPromise().then((response) => {
+    pca
+      .initialize()
+      .then(() => {
+        // Listen for login events (register before handleRedirect)
+        pca.addEventCallback((event) => {
+          if (event.eventType === EventType.LOGIN_SUCCESS && event.payload) {
+            const payload = event.payload as {
+              account: Parameters<typeof pca.setActiveAccount>[0];
+            };
+            pca.setActiveAccount(payload.account);
+          }
+        });
+
+        return pca.handleRedirectPromise();
+      })
+      .then((response) => {
         if (response) {
           pca.setActiveAccount(response.account);
         } else {
@@ -49,17 +62,13 @@ export function Providers({ children }: { children: ReactNode }) {
             pca.setActiveAccount(accounts[0]);
           }
         }
+      })
+      .catch((err) => {
+        console.error("[MSAL] Initialization error:", err);
+      })
+      .finally(() => {
         setMsalReady(true);
       });
-
-      // Listen for login events
-      pca.addEventCallback((event) => {
-        if (event.eventType === EventType.LOGIN_SUCCESS && event.payload) {
-          const payload = event.payload as { account: Parameters<typeof pca.setActiveAccount>[0] };
-          pca.setActiveAccount(payload.account);
-        }
-      });
-    });
   }, [pca]);
 
   if (!convexUrl) {
