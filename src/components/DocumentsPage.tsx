@@ -160,7 +160,7 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
           {Object.entries(documentTypeStats).map(([type, count]) => (
             <div key={type} className="flex items-center space-x-1 text-gray-600">
               {getDocumentIcon(type)}
-              <span>{count}</span>
+              <span>{String(count)}</span>
             </div>
           ))}
         </div>
