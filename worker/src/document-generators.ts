@@ -9,7 +9,7 @@ import pptxgen from "pptxgenjs";
 // Word document generation
 export interface WordDocumentSection {
   type: "heading" | "paragraph" | "list" | "table";
-  level?: HeadingLevel;
+  level?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
   content: string;
   items?: string[];
   tableData?: { headers: string[]; rows: string[][] };
