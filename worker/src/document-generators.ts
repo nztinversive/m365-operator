@@ -19,7 +19,7 @@ export async function generateWordDocument(
   title: string,
   sections: WordDocumentSection[]
 ): Promise<Buffer> {
-  const children = [
+  const children: (Paragraph | Table)[] = [
     // Title
     new Paragraph({
       text: title,
