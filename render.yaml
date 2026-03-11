@@ -12,3 +12,23 @@ services:
         value: https://loyal-anteater-646.convex.cloud
       - key: NEXT_PUBLIC_AZURE_CLIENT_ID
         value: b7da4c60-8c46-4167-82ce-acf1c5cdf67f
+
+  - type: worker
+    name: m365-operator-worker
+    runtime: node
+    plan: free
+    buildCommand: cd worker && npm ci && npm run build
+    startCommand: cd worker && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CONVEX_URL
+        sync: false
+      - key: AZURE_CLIENT_ID
+        value: b7da4c60-8c46-4167-82ce-acf1c5cdf67f
+      - key: AZURE_CLIENT_SECRET
+        sync: false
+      - key: AZURE_TENANT_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

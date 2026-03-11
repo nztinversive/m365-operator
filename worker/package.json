@@ -15,11 +15,11 @@
     "dotenv": "^16.4.5",
     "docx": "^8.5.0",
     "exceljs": "^4.4.0",
-    "pptxgenjs": "^3.13.0"
+    "pptxgenjs": "^3.13.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.0"
+    "tsx": "^4.7.0"
   }
 }
