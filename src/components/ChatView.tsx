@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AccountInfo } from "@azure/msal-browser";
 import { useMutation, useQuery } from "convex/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
@@ -66,6 +68,25 @@ function formatJobStatus(job: {
   return `Status updated: ${typeLabel}`;
 }
 
+const assistantMarkdownClassName = [
+  "text-sm leading-relaxed text-gray-200",
+  "[&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-white",
+  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-white",
+  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-white",
+  "[&_p]:my-2",
+  "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6",
+  "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6",
+  "[&_li]:my-1",
+  "[&_a]:text-blue-300 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-blue-200",
+  "[&_code]:rounded [&_code]:bg-gray-700/60 [&_code]:px-1 [&_code]:py-0.5",
+  "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-gray-900 [&_pre]:p-3",
+  "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
+  "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse",
+  "[&_th]:border [&_th]:border-gray-600 [&_th]:bg-gray-700/70 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-gray-100",
+  "[&_td]:border [&_td]:border-gray-700 [&_td]:px-3 [&_td]:py-2",
+  "[&_tbody_tr:nth-child(even)]:bg-gray-800/60",
+].join(" ");
+
 export function ChatView({ account, onLogout, userId }: ChatViewProps) {
   const messages = useQuery(api.messages.getMessages, { userId });
   const jobs = useQuery(api.jobs.getJobs, { userId });
@@ -79,14 +100,17 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const hasActiveJob = useMemo(() => {
-    if (!jobs) return false;
-    return jobs.some(
-      (job) =>
-        job.status === "queued" ||
-        job.status === "running" ||
-        job.status === "waiting_approval"
-    );
+  const activeJob = useMemo(() => {
+    if (!jobs) {
+      return null;
+    }
+
+    const runningJob = jobs.find((job) => job.status === "running");
+    if (runningJob) {
+      return runningJob;
+    }
+
+    return jobs.find((job) => job.status === "queued") ?? null;
   }, [jobs]);
 
   const timeline = useMemo<TimelineMessage[]>(() => {
@@ -97,8 +121,36 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
       timestamp: message.createdAt,
     }));
 
+    const assistantMessageJobIds = new Set(
+      (messages ?? [])
+        .filter((message) => message.role === "assistant" && message.jobId)
+        .map((message) => message.jobId)
+    );
+
+    const completedJobFallbacks: TimelineMessage[] = (jobs ?? [])
+      .filter((job) => {
+        const response = job.output?.response;
+        return (
+          job.status === "completed" &&
+          typeof response === "string" &&
+          response.trim().length > 0 &&
+          !assistantMessageJobIds.has(job._id)
+        );
+      })
+      .map((job) => ({
+        id: `job-output-${job._id}`,
+        role: "assistant",
+        content: job.output.response,
+        timestamp: job.completedAt ?? job.updatedAt,
+      }));
+
     const liveJobMessages: TimelineMessage[] = (jobs ?? [])
-      .filter((job) => job.status !== "completed")
+      .filter(
+        (job) =>
+          job.status !== "completed" &&
+          job.status !== "queued" &&
+          job.status !== "running"
+      )
       .map((job) => ({
         id: `job-status-${job._id}`,
         role: job.status === "failed" ? "assistant" : "system",
@@ -106,14 +158,14 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
         timestamp: job.updatedAt,
       }));
 
-    return [...persistedMessages, ...liveJobMessages].sort(
+    return [...persistedMessages, ...completedJobFallbacks, ...liveJobMessages].sort(
       (a, b) => a.timestamp - b.timestamp
     );
   }, [jobs, messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [timeline]);
+  }, [activeJob, isSubmitting, timeline]);
 
   const handleSend = async (prompt?: string) => {
     const text = (prompt ?? input).trim();
@@ -251,19 +303,16 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
                   : "bg-gray-800 text-gray-200"
               }`}
             >
-              <div className="whitespace-pre-wrap">
-                {message.content.split(/(\*\*.*?\*\*)/).map((part, i) => {
-                  if (part.startsWith("**") && part.endsWith("**")) {
-                    return (
-                      <strong key={`${message.id}-${i}`} className="font-semibold text-white">
-                        {part.slice(2, -2)}
-                      </strong>
-                    );
-                  }
-
-                  return <span key={`${message.id}-${i}`}>{part}</span>;
-                })}
-              </div>
+              {message.role === "assistant" ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  className={assistantMarkdownClassName}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              ) : (
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              )}
             </div>
 
             {message.role === "user" && (
@@ -274,13 +323,25 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           </div>
         ))}
 
-        {(isSubmitting || hasActiveJob) && (
+        {(isSubmitting || activeJob) && (
           <div className="flex gap-3">
             <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20">
               <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
             </div>
-            <div className="rounded-xl bg-gray-800 px-4 py-2.5 text-sm text-gray-400">
-              {isSubmitting ? "Queueing request..." : "Agent is working..."}
+            <div className="rounded-xl bg-gray-800 px-4 py-2.5 text-sm text-gray-300 animate-pulse">
+              <span className="font-medium text-gray-200">
+                {isSubmitting
+                  ? "Processing..."
+                  : activeJob?.status === "running"
+                  ? "Agent is thinking..."
+                  : "Processing..."}
+              </span>
+              {typeof activeJob?.progress === "number" && (
+                <span className="ml-1 text-gray-400">({activeJob.progress}%)</span>
+              )}
+              {activeJob?.progressMessage && (
+                <span className="ml-1 text-gray-500">- {activeJob.progressMessage}</span>
+              )}
             </div>
           </div>
         )}

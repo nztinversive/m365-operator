@@ -32,6 +32,12 @@ export const graphScopes = [
   "Mail.Send",
   "Calendars.ReadWrite",
   "Files.ReadWrite",
+  "Team.ReadBasic.All",
+  "Channel.ReadBasic.All",
+  "ChannelMessage.Read.All",
+  "ChannelMessage.Send",
+  "Chat.Read",
+  "ChatMessage.Send",
 ];
 
 export const allScopes = [...loginScopes, ...graphScopes];
