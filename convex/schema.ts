@@ -16,8 +16,8 @@ export default defineSchema({
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     expiresAt: v.number(),
-    scopes: v.array(v.string()),
-    connectedAt: v.number(),
+    email: v.string(),
+    displayName: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 
@@ -29,25 +29,24 @@ export default defineSchema({
   }).index("by_userId", ["userId"]),
 
   messages: defineTable({
-    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
-    metadata: v.optional(v.any()),
     createdAt: v.number(),
-  }).index("by_conversationId", ["conversationId"]),
+  }).index("by_userId", ["userId"])
+    .index("by_jobId", ["jobId"])
+    .index("by_userId_jobId", ["userId", "jobId"]),
 
   jobs: defineTable({
     userId: v.id("users"),
-    conversationId: v.optional(v.id("conversations")),
-    messageId: v.optional(v.id("messages")),
     type: v.string(), // "email_summary", "morning_briefing", etc.
     status: v.union(
       v.literal("queued"),
       v.literal("running"),
       v.literal("waiting_approval"),
       v.literal("completed"),
-      v.literal("failed"),
-      v.literal("cancelled")
+      v.literal("failed")
     ),
     input: v.optional(v.any()),
     output: v.optional(v.any()),
@@ -58,8 +57,7 @@ export default defineSchema({
     updatedAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"])
-    .index("by_status", ["status"])
-    .index("by_conversationId", ["conversationId"]),
+    .index("by_status", ["status"]),
 
   approvals: defineTable({
     jobId: v.id("jobs"),

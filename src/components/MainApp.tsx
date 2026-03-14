@@ -10,6 +10,7 @@ import { JobHistory } from "./JobHistory";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { DocumentsPage } from "./DocumentsPage";
 import { SettingsPage } from "./SettingsPage";
+import { useTokenSync } from "@/hooks/useTokenSync";
 
 interface MainAppProps {
   account: AccountInfo;
@@ -30,6 +31,11 @@ export function MainApp({ account, onLogout }: MainAppProps) {
     api.approvals.listPending, 
     user ? { userId: user._id } : "skip"
   );
+  useTokenSync({
+    userId: user?._id,
+    account,
+    enabled: Boolean(user && !isCreatingUser),
+  });
 
   useEffect(() => {
     if (user !== null || isCreatingUser || !account.username) {
@@ -90,7 +96,7 @@ export function MainApp({ account, onLogout }: MainAppProps) {
 
     switch (currentView) {
       case "chat":
-        return <ChatView account={account} onLogout={onLogout} />;
+        return <ChatView account={account} onLogout={onLogout} userId={user._id} />;
       case "jobs":
         return <JobHistory userId={user._id} />;
       case "approvals":
@@ -100,7 +106,7 @@ export function MainApp({ account, onLogout }: MainAppProps) {
       case "settings":
         return <SettingsPage userId={user._id} account={account} />;
       default:
-        return <ChatView account={account} onLogout={onLogout} />;
+        return <ChatView account={account} onLogout={onLogout} userId={user._id} />;
     }
   };
 

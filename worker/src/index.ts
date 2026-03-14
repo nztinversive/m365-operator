@@ -32,7 +32,7 @@ async function main() {
     clientId: process.env.AZURE_CLIENT_ID!,
     clientSecret: process.env.AZURE_CLIENT_SECRET!,
     tenantId: process.env.AZURE_TENANT_ID!
-  });
+  }, convex);
 
   // Initialize job processor
   const jobProcessor = new JobProcessor(convex, graphManager, {

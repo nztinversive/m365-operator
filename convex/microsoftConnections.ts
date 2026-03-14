@@ -1,42 +1,97 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+async function upsertConnectionRecord(
+  ctx: any,
+  args: {
+    userId: string;
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt: number;
+    email: string;
+    displayName?: string;
+  }
+) {
+  const existing = await ctx.db
+    .query("microsoftConnections")
+    .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+    .first();
+
+  const now = Date.now();
+  const connectionData = {
+    userId: args.userId,
+    accessToken: args.accessToken,
+    refreshToken: args.refreshToken,
+    expiresAt: args.expiresAt,
+    email: args.email,
+    displayName: args.displayName,
+    updatedAt: now,
+  };
+
+  if (existing) {
+    await ctx.db.patch(existing._id, connectionData);
+    return existing._id;
+  }
+
+  return await ctx.db.insert("microsoftConnections", connectionData);
+}
+
+export const upsertConnection = mutation({
+  args: {
+    userId: v.id("users"),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    email: v.string(),
+    displayName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await upsertConnectionRecord(ctx, args);
+  },
+});
+
+export const getConnection = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("microsoftConnections")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+  },
+});
+
+// Compatibility alias used by older frontend code paths.
 export const createOrUpdate = mutation({
   args: {
     userId: v.id("users"),
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     expiresAt: v.number(),
-    scopes: v.array(v.string()),
+    scopes: v.optional(v.array(v.string())),
+    email: v.optional(v.string()),
+    displayName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("microsoftConnections")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const user = await ctx.db.get(args.userId);
+    const email = args.email ?? user?.email;
+    const displayName = args.displayName ?? user?.name;
 
-    const now = Date.now();
-    const connectionData = {
+    if (!email) {
+      throw new Error("Unable to upsert Microsoft connection without user email.");
+    }
+
+    return await upsertConnectionRecord(ctx, {
       userId: args.userId,
       accessToken: args.accessToken,
       refreshToken: args.refreshToken,
       expiresAt: args.expiresAt,
-      scopes: args.scopes,
-      updatedAt: now,
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, connectionData);
-      return existing._id;
-    }
-
-    return await ctx.db.insert("microsoftConnections", {
-      ...connectionData,
-      connectedAt: now,
+      email,
+      displayName,
     });
   },
 });
 
+// Compatibility alias used by older frontend code paths.
 export const getByUserId = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -55,9 +110,10 @@ export const updateTokens = mutation({
     expiresAt: v.number(),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    await ctx.db.patch(id, {
-      ...updates,
+    await ctx.db.patch(args.id, {
+      accessToken: args.accessToken,
+      refreshToken: args.refreshToken,
+      expiresAt: args.expiresAt,
       updatedAt: Date.now(),
     });
   },

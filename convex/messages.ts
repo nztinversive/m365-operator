@@ -1,40 +1,89 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const list = query({
-  args: { conversationId: v.id("conversations") },
+const messageRole = v.union(v.literal("user"), v.literal("assistant"), v.literal("system"));
+
+export const addMessage = mutation({
+  args: {
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
+    role: messageRole,
+    content: v.string(),
+  },
   handler: async (ctx, args) => {
+    return await ctx.db.insert("messages", {
+      userId: args.userId,
+      jobId: args.jobId,
+      role: args.role,
+      content: args.content,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const getMessages = query({
+  args: {
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
+  },
+  handler: async (ctx, args) => {
+    if (args.jobId) {
+      return await ctx.db
+        .query("messages")
+        .withIndex("by_userId_jobId", (q) =>
+          q.eq("userId", args.userId).eq("jobId", args.jobId)
+        )
+        .order("asc")
+        .collect();
+    }
+
     return await ctx.db
       .query("messages")
-      .withIndex("by_conversationId", (q) =>
-        q.eq("conversationId", args.conversationId)
-      )
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("asc")
       .collect();
   },
 });
 
+// Compatibility aliases for existing callers.
 export const send = mutation({
   args: {
-    conversationId: v.id("conversations"),
-    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
+    role: messageRole,
     content: v.string(),
-    metadata: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    const messageId = await ctx.db.insert("messages", {
-      conversationId: args.conversationId,
+    return await ctx.db.insert("messages", {
+      userId: args.userId,
+      jobId: args.jobId,
       role: args.role,
       content: args.content,
-      metadata: args.metadata,
       createdAt: Date.now(),
     });
+  },
+});
 
-    // Update conversation timestamp
-    await ctx.db.patch(args.conversationId, {
-      updatedAt: Date.now(),
-    });
+export const list = query({
+  args: {
+    userId: v.id("users"),
+    jobId: v.optional(v.id("jobs")),
+  },
+  handler: async (ctx, args) => {
+    if (args.jobId) {
+      return await ctx.db
+        .query("messages")
+        .withIndex("by_userId_jobId", (q) =>
+          q.eq("userId", args.userId).eq("jobId", args.jobId)
+        )
+        .order("asc")
+        .collect();
+    }
 
-    return messageId;
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("asc")
+      .collect();
   },
 });

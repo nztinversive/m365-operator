@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { AccountInfo } from "@azure/msal-browser";
 import { useState } from "react";
+import { allScopes } from "@/lib/msal-config";
 import {
   Shield,
   Key,
@@ -28,7 +29,7 @@ interface SettingsPageProps {
 
 export function SettingsPage({ userId, account }: SettingsPageProps) {
   const user = useQuery(api.users.getByEmail, { email: account.username! });
-  const msConnection = useQuery(api.microsoftConnections.getByUserId, { userId });
+  const msConnection = useQuery(api.microsoftConnections.getConnection, { userId });
   const isTokenExpired = useQuery(api.microsoftConnections.isTokenExpired, { userId });
   
   const removeConnection = useMutation(api.microsoftConnections.remove);
@@ -143,11 +144,17 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
           <div className="space-y-4">
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Connected</span>
+                <span className="text-sm text-gray-500">Connection email</span>
                 <span className="text-sm text-gray-900">
-                  {formatDate(msConnection.connectedAt)}
+                  {msConnection.email}
                 </span>
               </div>
+              {msConnection.displayName && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Display name</span>
+                  <span className="text-sm text-gray-900">{msConnection.displayName}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Last updated</span>
                 <span className="text-sm text-gray-900">
@@ -167,7 +174,7 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
             <div>
               <h3 className="text-sm font-medium text-gray-900 mb-2">Granted Permissions</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {formatScopes(msConnection.scopes).map((scope, index) => (
+                {formatScopes(allScopes).map((scope, index) => (
                   <div key={index} className="flex items-center space-x-2 text-sm text-gray-600">
                     <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
                     <span>{scope}</span>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AccountInfo } from "@azure/msal-browser";
-import { useGraphClient } from "@/hooks/useGraphClient";
-import { getUnreadEmails, getTodayEvents, getUserProfile } from "@/lib/graph-client";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import {
   Send,
   LogOut,
@@ -15,195 +16,153 @@ import {
   Sparkles,
 } from "lucide-react";
 
-interface Message {
+interface ChatViewProps {
+  account: AccountInfo;
+  onLogout: () => void;
+  userId: Id<"users">;
+}
+
+interface TimelineMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
 }
 
-interface ChatViewProps {
-  account: AccountInfo;
-  onLogout: () => void;
+function formatJobType(type: string): string {
+  return type
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
-export function ChatView({ account, onLogout }: ChatViewProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: `Hey${account.name ? ` ${account.name.split(" ")[0]}` : ""}! I'm your M365 Operator. I can help you with:\n\n• **Summarize unread emails** — I'll pull your inbox and break it down\n• **Today's calendar** — See what's on your schedule\n• **Morning briefing** — Full overview of emails + calendar\n\nWhat would you like to do?`,
-      timestamp: Date.now(),
-    },
-  ]);
+function formatJobStatus(job: {
+  type: string;
+  status: string;
+  progress?: number;
+  progressMessage?: string;
+  error?: string;
+}): string {
+  const typeLabel = formatJobType(job.type);
+
+  if (job.status === "queued") {
+    return `Queued: ${typeLabel}`;
+  }
+
+  if (job.status === "running") {
+    const progress = typeof job.progress === "number" ? ` (${job.progress}%)` : "";
+    const detail = job.progressMessage ? ` - ${job.progressMessage}` : "";
+    return `Running: ${typeLabel}${progress}${detail}`;
+  }
+
+  if (job.status === "waiting_approval") {
+    return `Waiting for approval: ${typeLabel}`;
+  }
+
+  if (job.status === "failed") {
+    return `Failed: ${typeLabel}${job.error ? ` - ${job.error}` : ""}`;
+  }
+
+  return `Status updated: ${typeLabel}`;
+}
+
+export function ChatView({ account, onLogout, userId }: ChatViewProps) {
+  const messages = useQuery(api.messages.getMessages, { userId });
+  const jobs = useQuery(api.jobs.getJobs, { userId });
+
+  const addMessage = useMutation(api.messages.addMessage);
+  const createJob = useMutation(api.jobs.createJob);
+
   const [input, setInput] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { getClient } = useGraphClient();
+
+  const hasActiveJob = useMemo(() => {
+    if (!jobs) return false;
+    return jobs.some(
+      (job) =>
+        job.status === "queued" ||
+        job.status === "running" ||
+        job.status === "waiting_approval"
+    );
+  }, [jobs]);
+
+  const timeline = useMemo<TimelineMessage[]>(() => {
+    const persistedMessages: TimelineMessage[] = (messages ?? []).map((message) => ({
+      id: message._id,
+      role: message.role,
+      content: message.content,
+      timestamp: message.createdAt,
+    }));
+
+    const liveJobMessages: TimelineMessage[] = (jobs ?? [])
+      .filter((job) => job.status !== "completed")
+      .map((job) => ({
+        id: `job-status-${job._id}`,
+        role: job.status === "failed" ? "assistant" : "system",
+        content: formatJobStatus(job),
+        timestamp: job.updatedAt,
+      }));
+
+    return [...persistedMessages, ...liveJobMessages].sort(
+      (a, b) => a.timestamp - b.timestamp
+    );
+  }, [jobs, messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const addMessage = (role: Message["role"], content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), role, content, timestamp: Date.now() },
-    ]);
-  };
+  }, [timeline]);
 
   const handleSend = async (prompt?: string) => {
     const text = (prompt ?? input).trim();
-    if (!text || isProcessing) return;
+    if (!text || isSubmitting) {
+      return;
+    }
 
     setInput("");
-    addMessage("user", text);
-    setIsProcessing(true);
+    setIsSubmitting(true);
 
     try {
-      const lower = text.toLowerCase();
+      const jobId = await createJob({
+        userId,
+        type: "chat",
+        input: {
+          message: text,
+        },
+      });
 
-      if (
-        lower.includes("email") ||
-        lower.includes("inbox") ||
-        lower.includes("mail") ||
-        lower.includes("unread")
-      ) {
-        await handleEmailSummary();
-      } else if (
-        lower.includes("calendar") ||
-        lower.includes("schedule") ||
-        lower.includes("meeting") ||
-        lower.includes("today")
-      ) {
-        await handleCalendar();
-      } else if (
-        lower.includes("briefing") ||
-        lower.includes("brief") ||
-        lower.includes("morning") ||
-        lower.includes("overview")
-      ) {
-        await handleBriefing();
-      } else {
-        addMessage(
-          "assistant",
-          "I can help with:\n\n• **\"Summarize my emails\"** — Pull and summarize unread emails\n• **\"What's on my calendar?\"** — Today's schedule\n• **\"Morning briefing\"** — Full email + calendar overview\n\nMore capabilities coming soon — document generation, Teams integration, and approval workflows."
-        );
+      await addMessage({
+        userId,
+        jobId,
+        role: "user",
+        content: text,
+      });
+    } catch (error) {
+      console.error("Failed to queue message/job:", error);
+
+      try {
+        await addMessage({
+          userId,
+          role: "system",
+          content:
+            "I could not queue that request. Please try again in a moment.",
+        });
+      } catch (innerError) {
+        console.error("Failed to save error message:", innerError);
       }
-    } catch (err) {
-      console.error(err);
-      addMessage(
-        "assistant",
-        `Something went wrong: ${err instanceof Error ? err.message : "Unknown error"}. You may need to re-authenticate.`
-      );
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
       inputRef.current?.focus();
     }
   };
 
-  const handleEmailSummary = async () => {
-    addMessage("system", "📬 Fetching unread emails...");
-    const client = await getClient();
-    const emails = await getUnreadEmails(client, 10);
-
-    if (emails.length === 0) {
-      addMessage("assistant", "📭 Inbox zero! No unread emails right now.");
-      return;
-    }
-
-    let summary = `📬 **${emails.length} unread email${emails.length > 1 ? "s" : ""}:**\n\n`;
-    for (const email of emails) {
-      const time = new Date(email.receivedDateTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const fromName = email.from?.emailAddress?.name || email.from?.emailAddress?.address || "Unknown";
-      summary += `**${email.subject || "(no subject)"}**\nFrom: ${fromName} • ${time}\n> ${email.bodyPreview?.slice(0, 120) || "No preview"}${email.bodyPreview?.length > 120 ? "..." : ""}\n\n`;
-    }
-
-    addMessage("assistant", summary);
-  };
-
-  const handleCalendar = async () => {
-    addMessage("system", "📅 Checking today's calendar...");
-    const client = await getClient();
-    const events = await getTodayEvents(client);
-
-    if (events.length === 0) {
-      addMessage("assistant", "📅 No events on your calendar today. Clear schedule!");
-      return;
-    }
-
-    let summary = `📅 **Today's schedule (${events.length} event${events.length > 1 ? "s" : ""}):**\n\n`;
-    for (const event of events) {
-      const start = new Date(event.start.dateTime + "Z").toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const end = new Date(event.end.dateTime + "Z").toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const location = event.location?.displayName ? ` • 📍 ${event.location.displayName}` : "";
-      summary += `**${start} – ${end}** ${event.subject}${location}\n`;
-    }
-
-    addMessage("assistant", summary);
-  };
-
-  const handleBriefing = async () => {
-    addMessage("system", "☕ Preparing your morning briefing...");
-    const client = await getClient();
-
-    const [emails, events, profile] = await Promise.all([
-      getUnreadEmails(client, 10),
-      getTodayEvents(client),
-      getUserProfile(client).catch(() => null),
-    ]);
-
-    let brief = `# ☕ Morning Briefing`;
-    if (profile?.displayName) brief += ` for ${profile.displayName.split(" ")[0]}`;
-    brief += `\n*${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}*\n\n`;
-
-    // Calendar
-    brief += `## 📅 Today's Schedule\n`;
-    if (events.length === 0) {
-      brief += "No events today — clear calendar.\n\n";
-    } else {
-      for (const event of events) {
-        const start = new Date(event.start.dateTime + "Z").toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        brief += `- **${start}** ${event.subject}\n`;
-      }
-      brief += "\n";
-    }
-
-    // Emails
-    brief += `## 📬 Inbox\n`;
-    if (emails.length === 0) {
-      brief += "Inbox zero! No unread emails.\n";
-    } else {
-      brief += `${emails.length} unread:\n`;
-      for (const email of emails.slice(0, 5)) {
-        const fromName = email.from?.emailAddress?.name || "Unknown";
-        brief += `- **${email.subject || "(no subject)"}** from ${fromName}\n`;
-      }
-      if (emails.length > 5) brief += `- ...and ${emails.length - 5} more\n`;
-    }
-
-    addMessage("assistant", brief);
-  };
-
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+    <div className="flex h-screen flex-col bg-gray-950">
+      <header className="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div>
@@ -211,128 +170,147 @@ export function ChatView({ account, onLogout }: ChatViewProps) {
             <p className="text-xs text-gray-500">{account.username}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-800"
-          >
-            <LogOut className="w-3 h-3" />
-            Sign out
-          </button>
-        </div>
+
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+        >
+          <LogOut className="h-3 w-3" />
+          Sign out
+        </button>
       </header>
 
-      {/* Quick Actions */}
-      <div className="flex gap-2 px-4 py-2 border-b border-gray-800/50">
+      <div className="flex gap-2 border-b border-gray-800/50 px-4 py-2">
         <button
           onClick={() => void handleSend("Summarize my unread emails")}
-          disabled={isProcessing}
-          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
         >
-          <Mail className="w-3 h-3" />
+          <Mail className="h-3 w-3" />
           Emails
         </button>
+
         <button
           onClick={() => void handleSend("What's on my calendar today?")}
-          disabled={isProcessing}
-          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
         >
-          <Calendar className="w-3 h-3" />
+          <Calendar className="h-3 w-3" />
           Calendar
         </button>
+
         <button
           onClick={() => void handleSend("Morning briefing")}
-          disabled={isProcessing}
-          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
         >
-          <Sparkles className="w-3 h-3" />
+          <Sparkles className="h-3 w-3" />
           Briefing
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.map((msg) => (
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        {timeline.length === 0 && (
+          <div className="flex gap-3">
+            <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400">
+              <Bot className="h-4 w-4" />
+            </div>
+            <div className="max-w-[80%] rounded-xl bg-gray-800 px-4 py-2.5 text-sm leading-relaxed text-gray-200">
+              Welcome! Ask me about your email, calendar, or request a briefing.
+            </div>
+          </div>
+        )}
+
+        {timeline.map((message) => (
           <div
-            key={msg.id}
-            className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
+            key={message.id}
+            className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}
           >
-            {msg.role !== "user" && (
+            {message.role !== "user" && (
               <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                  msg.role === "assistant"
+                className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg ${
+                  message.role === "assistant"
                     ? "bg-blue-600/20 text-blue-400"
                     : "bg-gray-800 text-gray-500"
                 }`}
               >
-                {msg.role === "assistant" ? (
-                  <Bot className="w-4 h-4" />
+                {message.role === "assistant" ? (
+                  <Bot className="h-4 w-4" />
                 ) : (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 )}
               </div>
             )}
+
             <div
               className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm leading-relaxed ${
-                msg.role === "user"
+                message.role === "user"
                   ? "bg-blue-600 text-white"
-                  : msg.role === "system"
-                  ? "bg-gray-800/50 text-gray-400 text-xs italic"
+                  : message.role === "system"
+                  ? "bg-gray-800/50 text-xs italic text-gray-400"
                   : "bg-gray-800 text-gray-200"
               }`}
             >
               <div className="whitespace-pre-wrap">
-                {msg.content.split(/(\*\*.*?\*\*)/).map((part, i) => {
+                {message.content.split(/(\*\*.*?\*\*)/).map((part, i) => {
                   if (part.startsWith("**") && part.endsWith("**")) {
                     return (
-                      <strong key={i} className="font-semibold text-white">
+                      <strong key={`${message.id}-${i}`} className="font-semibold text-white">
                         {part.slice(2, -2)}
                       </strong>
                     );
                   }
-                  return part;
+
+                  return <span key={`${message.id}-${i}`}>{part}</span>;
                 })}
               </div>
             </div>
-            {msg.role === "user" && (
-              <div className="w-7 h-7 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <User className="w-4 h-4 text-gray-300" />
+
+            {message.role === "user" && (
+              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gray-700">
+                <User className="h-4 w-4 text-gray-300" />
               </div>
             )}
           </div>
         ))}
-        {isProcessing && (
+
+        {(isSubmitting || hasActiveJob) && (
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-lg bg-blue-600/20 flex items-center justify-center flex-shrink-0">
-              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
             </div>
-            <div className="bg-gray-800 rounded-xl px-4 py-2.5 text-sm text-gray-400">
-              Thinking...
+            <div className="rounded-xl bg-gray-800 px-4 py-2.5 text-sm text-gray-400">
+              {isSubmitting ? "Queueing request..." : "Agent is working..."}
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="border-t border-gray-800 px-4 py-3">
-        <div className="flex gap-2 max-w-3xl mx-auto">
+        <div className="mx-auto flex max-w-3xl gap-2">
           <input
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                void handleSend();
+              }
+            }}
             placeholder="Ask about your emails, calendar, or request a briefing..."
-            disabled={isProcessing}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            disabled={isSubmitting}
+            className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
           />
+
           <button
             onClick={() => void handleSend()}
-            disabled={isProcessing || !input.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 text-white p-2.5 rounded-lg transition-colors"
+            disabled={isSubmitting || !input.trim()}
+            className="rounded-lg bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
           >
-            <Send className="w-4 h-4" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
       </div>
