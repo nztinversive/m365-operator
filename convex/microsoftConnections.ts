@@ -14,7 +14,7 @@ async function upsertConnectionRecord(
 ) {
   const existing = await ctx.db
     .query("microsoftConnections")
-    .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+    .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
     .first();
 
   const now = Date.now();
@@ -55,7 +55,7 @@ export const getConnection = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("microsoftConnections")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .first();
   },
 });
@@ -97,7 +97,7 @@ export const getByUserId = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("microsoftConnections")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .first();
   },
 });
@@ -124,7 +124,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const connection = await ctx.db
       .query("microsoftConnections")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .first();
 
     if (connection) {
@@ -138,7 +138,7 @@ export const isTokenExpired = query({
   handler: async (ctx, args) => {
     const connection = await ctx.db
       .query("microsoftConnections")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .first();
 
     if (!connection) {
