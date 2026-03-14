@@ -11,6 +11,15 @@ export default defineSchema({
   }).index("by_email", ["email"])
     .index("by_microsoftId", ["microsoftId"]),
 
+  userSettings: defineTable({
+    userId: v.id("users"),
+    aiProvider: v.union(v.literal("claude_max"), v.literal("claude_api")),
+    claudeMaxToken: v.optional(v.string()),
+    claudeApiKey: v.optional(v.string()),
+    claudeModel: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   microsoftConnections: defineTable({
     userId: v.id("users"),
     accessToken: v.string(),

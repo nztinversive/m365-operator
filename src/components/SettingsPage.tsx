@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { AccountInfo } from "@azure/msal-browser";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { allScopes } from "@/lib/msal-config";
 import {
   Shield,
@@ -20,6 +20,9 @@ import {
   Settings,
   Trash2,
   RefreshCw,
+  Bot,
+  ClipboardPaste,
+  Loader2,
 } from "lucide-react";
 
 interface SettingsPageProps {
@@ -27,14 +30,52 @@ interface SettingsPageProps {
   account: AccountInfo;
 }
 
+type AIProvider = "claude_max" | "claude_api";
+
+const CLAUDE_MODEL_OPTIONS = [
+  "claude-opus-4-6",
+  "claude-sonnet-4-6",
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "claude-haiku-4-5",
+  "claude-sonnet-4-20250514",
+];
+
+const DEFAULT_CLAUDE_MODEL = "claude-opus-4-6";
+
 export function SettingsPage({ userId, account }: SettingsPageProps) {
   const user = useQuery(api.users.getByEmail, { email: account.username! });
   const msConnection = useQuery(api.microsoftConnections.getConnection, { userId });
   const isTokenExpired = useQuery(api.microsoftConnections.isTokenExpired, { userId });
+  const aiSettings = useQuery(api.userSettings.getSettings, { userId });
   
   const removeConnection = useMutation(api.microsoftConnections.remove);
+  const updateAiSettings = useMutation(api.userSettings.updateSettings);
   
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [aiProvider, setAiProvider] = useState<AIProvider>("claude_max");
+  const [claudeMaxToken, setClaudeMaxToken] = useState("");
+  const [claudeApiKey, setClaudeApiKey] = useState("");
+  const [claudeModel, setClaudeModel] = useState(DEFAULT_CLAUDE_MODEL);
+  const [isSavingAiSettings, setIsSavingAiSettings] = useState(false);
+  const [isTestingAiSettings, setIsTestingAiSettings] = useState(false);
+  const [aiMessage, setAiMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [aiSettingsInitialized, setAiSettingsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!aiSettings || aiSettingsInitialized) {
+      return;
+    }
+
+    setAiProvider(aiSettings.aiProvider);
+    setClaudeMaxToken(aiSettings.claudeMaxToken ?? "");
+    setClaudeApiKey(aiSettings.claudeApiKey ?? "");
+    setClaudeModel(aiSettings.claudeModel ?? DEFAULT_CLAUDE_MODEL);
+    setAiSettingsInitialized(true);
+  }, [aiSettings, aiSettingsInitialized]);
 
   const handleDisconnectMicrosoft = async () => {
     if (!confirm("Are you sure you want to disconnect your Microsoft account? This will stop all automated tasks.")) {
@@ -74,6 +115,124 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
 
     return scopes.map(scope => scopeDescriptions[scope] || scope);
   };
+
+  const maskToken = (token: string) => {
+    if (token.length <= 15) {
+      return token;
+    }
+    return `${token.slice(0, 15)}...`;
+  };
+
+  const handlePasteToken = async (provider: AIProvider) => {
+    try {
+      if (!navigator.clipboard) {
+        throw new Error("Clipboard access is not available in this browser.");
+      }
+
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) {
+        throw new Error("Clipboard is empty.");
+      }
+
+      if (provider === "claude_max") {
+        setClaudeMaxToken(text);
+      } else {
+        setClaudeApiKey(text);
+      }
+
+      setAiMessage(null);
+    } catch (error) {
+      console.error("Failed to paste token:", error);
+      setAiMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Unable to paste token.",
+      });
+    }
+  };
+
+  const handleSaveAiProviderSettings = async () => {
+    try {
+      setIsSavingAiSettings(true);
+      setAiMessage(null);
+
+      const normalizedMaxToken = claudeMaxToken.trim();
+      const normalizedApiKey = claudeApiKey.trim();
+      const normalizedModel = claudeModel.trim() || DEFAULT_CLAUDE_MODEL;
+
+      await updateAiSettings({
+        userId,
+        aiProvider,
+        claudeMaxToken: normalizedMaxToken || undefined,
+        claudeApiKey: normalizedApiKey || undefined,
+        claudeModel: normalizedModel,
+      });
+
+      setClaudeMaxToken(normalizedMaxToken);
+      setClaudeApiKey(normalizedApiKey);
+      setClaudeModel(normalizedModel);
+      setAiMessage({ type: "success", text: "AI provider settings saved." });
+    } catch (error) {
+      console.error("Failed to save AI settings:", error);
+      setAiMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to save AI settings.",
+      });
+    } finally {
+      setIsSavingAiSettings(false);
+    }
+  };
+
+  const handleTestAiSettings = async () => {
+    const tokenToTest = (aiProvider === "claude_max" ? claudeMaxToken : claudeApiKey).trim();
+    const providerLabel = aiProvider === "claude_max" ? "Claude Max token" : "Claude API key";
+
+    if (!tokenToTest) {
+      setAiMessage({
+        type: "error",
+        text: `${providerLabel} is empty. Paste or enter a token before testing.`,
+      });
+      return;
+    }
+
+    try {
+      setIsTestingAiSettings(true);
+      setAiMessage(null);
+
+      const response = await fetch("/api/test-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: tokenToTest,
+          provider: aiProvider,
+          model: claudeModel,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Token test failed.");
+      }
+
+      setAiMessage({
+        type: "success",
+        text: "Connection test succeeded.",
+      });
+    } catch (error) {
+      console.error("AI token test failed:", error);
+      setAiMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Connection test failed.",
+      });
+    } finally {
+      setIsTestingAiSettings(false);
+    }
+  };
+
+  const selectedToken = (aiProvider === "claude_max" ? claudeMaxToken : claudeApiKey).trim();
+  const isProviderConfigured = selectedToken.length > 0;
 
   return (
     <div className="space-y-6">
@@ -222,6 +381,178 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
             </p>
           </div>
         )}
+      </div>
+
+      {/* AI Provider */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Bot className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-medium text-gray-900">AI Provider</h2>
+          </div>
+
+          <div
+            className={`flex items-center space-x-2 ${
+              isProviderConfigured ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                isProviderConfigured ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-sm font-medium">
+              {isProviderConfigured ? "Connected" : "Not configured"}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <label className="text-sm font-medium text-gray-900">Provider</label>
+            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="border border-gray-200 rounded-lg px-3 py-2 flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="ai-provider"
+                  value="claude_max"
+                  checked={aiProvider === "claude_max"}
+                  onChange={() => setAiProvider("claude_max")}
+                  className="text-blue-600"
+                />
+                <span className="text-sm text-gray-800">Claude Max (OAuth)</span>
+              </label>
+              <label className="border border-gray-200 rounded-lg px-3 py-2 flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="ai-provider"
+                  value="claude_api"
+                  checked={aiProvider === "claude_api"}
+                  onChange={() => setAiProvider("claude_api")}
+                  className="text-blue-600"
+                />
+                <span className="text-sm text-gray-800">Claude API Key</span>
+              </label>
+            </div>
+          </div>
+
+          {aiProvider === "claude_max" ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Claude Max OAuth Token
+              </label>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  type="password"
+                  value={claudeMaxToken}
+                  onChange={(event) => setClaudeMaxToken(event.target.value)}
+                  placeholder="sk-ant-oat01-..."
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  autoComplete="off"
+                />
+                <button
+                  onClick={() => void handlePasteToken("claude_max")}
+                  type="button"
+                  className="inline-flex items-center justify-center space-x-2 px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <ClipboardPaste className="w-4 h-4" />
+                  <span>Paste</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Claude API Key
+              </label>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  type="password"
+                  value={claudeApiKey}
+                  onChange={(event) => setClaudeApiKey(event.target.value)}
+                  placeholder="sk-ant-..."
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                  autoComplete="off"
+                />
+                <button
+                  onClick={() => void handlePasteToken("claude_api")}
+                  type="button"
+                  className="inline-flex items-center justify-center space-x-2 px-3 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <ClipboardPaste className="w-4 h-4" />
+                  <span>Paste</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Claude Model
+            </label>
+            <select
+              value={claudeModel}
+              onChange={(event) => setClaudeModel(event.target.value)}
+              className="w-full md:w-auto rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white focus:border-blue-500 focus:outline-none"
+            >
+              {CLAUDE_MODEL_OPTIONS.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedToken && (
+            <p className="text-xs text-gray-500">
+              Active token: <span className="font-mono">{maskToken(selectedToken)}</span>
+            </p>
+          )}
+
+          {aiMessage && (
+            <div
+              className={`text-sm ${
+                aiMessage.type === "success" ? "text-green-700" : "text-red-700"
+              }`}
+            >
+              {aiMessage.text}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => void handleSaveAiProviderSettings()}
+              disabled={isSavingAiSettings}
+              type="button"
+              className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {isSavingAiSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => void handleTestAiSettings()}
+              disabled={isTestingAiSettings}
+              type="button"
+              className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {isTestingAiSettings ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Testing...</span>
+                </>
+              ) : (
+                <span>Test</span>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Capabilities Overview */}

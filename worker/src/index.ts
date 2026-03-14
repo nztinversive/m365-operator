@@ -11,7 +11,6 @@ async function main() {
   // Validate required environment variables
   const required = [
     'CONVEX_URL',
-    'ANTHROPIC_API_KEY',
     'AZURE_CLIENT_ID',
     'AZURE_CLIENT_SECRET',
     'AZURE_TENANT_ID'
@@ -36,7 +35,7 @@ async function main() {
 
   // Initialize job processor
   const jobProcessor = new JobProcessor(convex, graphManager, {
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY!,
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     workingDirectory: process.env.WORKING_DIRECTORY || './temp',
     maxConcurrentJobs: parseInt(process.env.MAX_CONCURRENT_JOBS || '3'),
     jobPollingInterval: parseInt(process.env.JOB_POLLING_INTERVAL || '5000'),

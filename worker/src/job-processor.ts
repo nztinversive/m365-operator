@@ -16,7 +16,7 @@ import {
 } from './document-generators.js';
 
 export interface JobProcessorConfig {
-  anthropicApiKey: string;
+  anthropicApiKey: string | undefined;
   workingDirectory: string;
   maxConcurrentJobs: number;
   jobPollingInterval: number;
@@ -53,6 +53,7 @@ export class JobProcessor {
   private readonly getQueuedRef = api.jobs!.getQueued as unknown as FunctionReference<'query'>;
   private readonly updateStatusRef = api.jobs!.updateStatus as unknown as FunctionReference<'mutation'>;
   private readonly createApprovalRef = api.approvals!.create as unknown as FunctionReference<'mutation'>;
+  private readonly getActiveApiKeyRef = api.userSettings!.getActiveApiKey as unknown as FunctionReference<'query'>;
 
   constructor(
     private convex: ConvexHttpClient,
@@ -152,6 +153,21 @@ export class JobProcessor {
 
   private async executeJob(job: Job): Promise<void> {
     try {
+      const activeAiConfig = await this.convex.query(this.getActiveApiKeyRef, {
+        userId: job.userId,
+      }) as {
+        aiProvider?: 'claude_max' | 'claude_api';
+        apiKey?: string | null;
+        claudeModel?: string | null;
+      } | null;
+
+      const anthropicApiKey = activeAiConfig?.apiKey || this.config.anthropicApiKey;
+      if (!anthropicApiKey) {
+        throw new Error('No Anthropic API key configured. Set one in Settings or ANTHROPIC_API_KEY.');
+      }
+
+      const model = activeAiConfig?.claudeModel || 'claude-sonnet-4-20250514';
+
       // Get the user's Graph client (authenticated with their token)
       const graphClient = await this.graphManager.getClientForUser(job.userId);
 
@@ -159,9 +175,10 @@ export class JobProcessor {
       const task = this.buildTaskPrompt(job);
 
       // Run the Claude agent with tools
-      const result = await runAgent(this.config.anthropicApiKey, {
+      const result = await runAgent(anthropicApiKey, {
         task,
         graphClient,
+        model,
         onProgress: (msg) => {
           this.updateJobProgress(job._id, msg);
         },

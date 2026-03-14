@@ -658,6 +658,7 @@ export class ToolExecutor {
 export interface AgentRunOptions {
   task: string;
   graphClient: Client;
+  model?: string;
   onProgress?: (message: string) => void;
   onToolCall?: (toolName: string, input: any) => void;
   onApprovalNeeded?: (toolName: string, input: any) => Promise<boolean>;
@@ -693,6 +694,7 @@ export async function runAgent(
   const anthropic = new Anthropic({ apiKey: anthropicApiKey });
   const toolExecutor = new ToolExecutor(options.graphClient);
   const maxTurns = options.maxTurns || 15;
+  const model = options.model || "claude-sonnet-4-20250514";
 
   const messages: MessageParam[] = [
     { role: 'user', content: options.task },
@@ -708,7 +710,7 @@ export async function runAgent(
 
     // Call Claude with tools
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model,
       max_tokens: 8192,
       system: SYSTEM_PROMPT,
       tools: M365_TOOLS,
