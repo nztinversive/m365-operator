@@ -193,7 +193,7 @@ export class JobProcessor {
       });
 
       // Process generated files — convert specs to actual documents and upload
-      const uploadedFiles = [];
+      const uploadedFiles: Array<{name: string; type: string; url: any; id: any}> = [];
       for (const file of result.generatedFiles) {
         try {
           const spec = JSON.parse(file.buffer.toString());

@@ -17,7 +17,7 @@ services:
     name: m365-operator-worker
     runtime: node
     plan: free
-    buildCommand: cd worker && npm ci && npm run build
+    buildCommand: npm ci && npx convex codegen && cd worker && npm ci && npm run build
     startCommand: cd worker && npm run start
     envVars:
       - key: NODE_ENV
@@ -32,3 +32,5 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: CONVEX_DEPLOYMENT
+        value: prod:moonlit-hedgehog-671
