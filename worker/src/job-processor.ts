@@ -235,6 +235,16 @@ export class JobProcessor {
         approvalsPending: result.approvalsPending,
       }, undefined, 100);
 
+      // Save the assistant response as a message so the UI can display it
+      if (result.response) {
+        await this.convex.mutation(api.messages.addMessage, {
+          userId: job.userId,
+          jobId: job._id,
+          role: 'assistant',
+          content: result.response,
+        });
+      }
+
       console.log(`✅ Job ${job._id} ${status} (${result.toolsUsed.length} tools, ${uploadedFiles.length} files)`);
     } catch (error) {
       console.error(`❌ Job ${job._id} failed:`, error);
