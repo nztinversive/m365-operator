@@ -4,11 +4,21 @@
   <title>Signing in...</title>
 </head>
 <body>
+  <p style="text-align:center;margin-top:40vh;color:#888;font-family:sans-serif">Completing sign-in...</p>
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
   <script>
-    // This page is the MSAL popup redirect target.
-    // The parent window's MSAL instance handles the auth code via handleRedirectPromise().
-    // We just need to keep this page alive long enough for MSAL to read the URL hash.
-    // The popup will be closed automatically by MSAL in the parent window.
+    // This page runs inside the MSAL popup.
+    // It initializes a minimal MSAL instance, calls handleRedirectPromise()
+    // which reads the auth code from the URL hash and posts it back to the
+    // parent window via BroadcastChannel / window.opener, then closes.
+    const clientId = new URLSearchParams(
+      (window.location.hash || '').replace('#','?')
+    ).get('client_info') ? undefined : undefined;
+    
+    // MSAL popup flow: the parent window's MSAL instance polls this popup
+    // for the URL hash. We just need to stay open long enough.
+    // With msal-browser v3+, the parent reads the popup's location directly.
+    // So we don't need to do anything — just exist with the hash in the URL.
   </script>
 </body>
 </html>

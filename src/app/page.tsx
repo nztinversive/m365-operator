@@ -13,7 +13,7 @@ export default function Home() {
     try {
       await instance.loginPopup({ 
         scopes: allScopes,
-        redirectUri: `${window.location.origin}/redirect.html`
+        redirectUri: window.location.origin
       });
     } catch (err: unknown) {
       // If popup was blocked, fall back to redirect flow
