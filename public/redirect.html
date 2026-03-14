@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head><title>Signing in...</title></head>
-<body></body>
+<head>
+  <title>Signing in...</title>
+</head>
+<body>
+  <script>
+    // This page is the MSAL popup redirect target.
+    // The parent window's MSAL instance handles the auth code via handleRedirectPromise().
+    // We just need to keep this page alive long enough for MSAL to read the URL hash.
+    // The popup will be closed automatically by MSAL in the parent window.
+  </script>
+</body>
 </html>
