@@ -25,7 +25,7 @@ export const create = mutation({
   },
 });
 
-export const list = query({
+export const getDocuments = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     return await ctx.db
@@ -33,6 +33,26 @@ export const list = query({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .order("desc")
       .take(50);
+  },
+});
+
+export const getDocumentsByType = query({
+  args: {
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("docx"),
+      v.literal("xlsx"),
+      v.literal("pptx"),
+      v.literal("pdf")
+    ),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("documents")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("type"), args.type))
+      .order("desc")
+      .collect();
   },
 });
 
@@ -70,5 +90,17 @@ export const remove = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Compatibility alias for existing callers.
+export const list = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("documents")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(50);
   },
 });

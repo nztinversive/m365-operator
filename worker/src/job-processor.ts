@@ -53,6 +53,8 @@ export class JobProcessor {
   private readonly getQueuedRef = api.jobs!.getQueued as unknown as FunctionReference<'query'>;
   private readonly updateStatusRef = api.jobs!.updateStatus as unknown as FunctionReference<'mutation'>;
   private readonly createApprovalRef = api.approvals!.create as unknown as FunctionReference<'mutation'>;
+  private readonly getApprovalsByJobRef = api.approvals!.getByJobId as unknown as FunctionReference<'query'>;
+  private readonly createDocumentRef = api.documents!.create as unknown as FunctionReference<'mutation'>;
   private readonly getActiveApiKeyRef = api.userSettings!.getActiveApiKey as unknown as FunctionReference<'query'>;
 
   constructor(
@@ -186,9 +188,14 @@ export class JobProcessor {
           console.log(`  🔧 ${name}(${JSON.stringify(input).substring(0, 100)}...)`);
         },
         onApprovalNeeded: async (toolName, input) => {
+          const alreadyApproved = await this.hasApprovedAction(job._id, toolName, input);
+          if (alreadyApproved) {
+            return true;
+          }
+
           // Create an approval request in Convex and pause the job
           await this.requestApproval(job._id, job.userId, toolName, input);
-          return false; // Don't auto-approve — wait for user
+          return false; // Don't auto-approve; wait for user
         },
       });
 

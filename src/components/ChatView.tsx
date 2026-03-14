@@ -252,12 +252,28 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
         </button>
 
         <button
-          onClick={() => void handleSend("Morning briefing")}
+          onClick={() => void handleSend("Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.")}
           disabled={isSubmitting}
           className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
         >
           <Sparkles className="h-3 w-3" />
-          Briefing
+          Morning Briefing
+        </button>
+
+        <button
+          onClick={() => void handleSend("Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.")}
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
+        >
+          📊 Status Deck
+        </button>
+
+        <button
+          onClick={() => void handleSend("Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.")}
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
+        >
+          📋 Excel Tracker
         </button>
       </div>
 
@@ -304,12 +320,11 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               }`}
             >
               {message.role === "assistant" ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  className={assistantMarkdownClassName}
-                >
-                  {message.content}
-                </ReactMarkdown>
+                <div className={assistantMarkdownClassName}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
               ) : (
                 <div className="whitespace-pre-wrap">{message.content}</div>
               )}
