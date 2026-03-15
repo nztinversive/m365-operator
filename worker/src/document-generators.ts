@@ -3,7 +3,7 @@
 // For now, we'll duplicate the essential types and implementations
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell } from "docx";
-import * as ExcelJS from "exceljs";
+import ExcelJS from "exceljs";
 import pptxgen from "pptxgenjs";
 
 // Word document generation
