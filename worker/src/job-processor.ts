@@ -316,6 +316,15 @@ export class JobProcessor {
     await this.updateJobStatus(jobId, 'running', undefined, undefined, undefined, message);
   }
 
+  private async hasApprovedAction(jobId: string, toolName: string, _input: any): Promise<boolean> {
+    try {
+      const approvals = await this.convex.query(api.approvals.getByJobId, { jobId: jobId as any });
+      return approvals?.some((a: any) => a.toolName === toolName && a.status === "approved") ?? false;
+    } catch {
+      return false;
+    }
+  }
+
   private async requestApproval(
     jobId: string,
     userId: string,
