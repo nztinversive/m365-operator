@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Client } from '@microsoft/microsoft-graph-client';
 import type { Tool, MessageParam, ContentBlock } from '@anthropic-ai/sdk/resources/messages';
+import { generateWordDocument, generateExcelWorkbook, generatePowerPointPresentation } from './document-generators';
 
 // ─── Tool Definitions ───────────────────────────────────────────────
 // These are the "hands" we give Claude. Each tool maps to a Microsoft Graph operation.
@@ -792,6 +793,71 @@ export async function runAgent(
               message: `Document "${toolInput.title || toolInput.file_name}" has been generated successfully.`,
             }),
           });
+          continue;
+        }
+
+        // Handle upload_file: generate document and upload to OneDrive immediately
+        if (toolName === 'upload_file') {
+          try {
+            const fileName = toolInput.file_name || toolInput.title || 'document';
+            const fileType = toolInput.file_type || 'word';
+            const folder = toolInput.folder || 'M365 Operator';
+            const content = toolInput.content || {};
+
+            // Generate the document buffer
+            let docBuffer: Buffer;
+            if (fileType === 'word') {
+              docBuffer = await generateWordDocument(content.title || fileName, content.sections || []);
+            } else if (fileType === 'excel') {
+              docBuffer = await generateExcelWorkbook(content.worksheets || []);
+            } else if (fileType === 'powerpoint') {
+              docBuffer = await generatePowerPointPresentation(content.title || fileName, content.slides || []);
+            } else {
+              throw new Error(`Unsupported file type: ${fileType}`);
+            }
+
+            // Ensure correct extension
+            const extMap: Record<string, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' };
+            let uploadName = fileName;
+            const ext = extMap[fileType];
+            if (ext && !uploadName.endsWith(ext)) {
+              uploadName = uploadName.replace(/\.\w+$/, '') + ext;
+            }
+
+            // Upload to OneDrive
+            const uploadResult = await options.graphClient
+              .api(`/me/drive/root:/${folder}/${uploadName}:/content`)
+              .put(docBuffer);
+
+            const resultData = {
+              status: 'uploaded',
+              name: uploadResult.name,
+              webUrl: uploadResult.webUrl,
+              id: uploadResult.id,
+              folder,
+            };
+
+            generatedFiles.push({
+              name: uploadName,
+              type: `${fileType}_document`,
+              buffer: docBuffer,
+            });
+
+            toolsUsed.push({ name: toolName, input: toolInput, output: JSON.stringify(resultData) });
+
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify(resultData),
+            });
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : 'Upload failed';
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify({ error: errMsg }),
+            });
+          }
           continue;
         }
 
