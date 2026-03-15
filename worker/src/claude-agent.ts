@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Client } from '@microsoft/microsoft-graph-client';
 import type { Tool, MessageParam, ContentBlock } from '@anthropic-ai/sdk/resources/messages';
-import { generateWordDocument, generateExcelWorkbook, generatePowerPointPresentation } from './document-generators';
+import { generateWordDocument, generateExcelWorkbook, generatePowerPointPresentation } from './document-generators.js';
 
 // ─── Tool Definitions ───────────────────────────────────────────────
 // These are the "hands" we give Claude. Each tool maps to a Microsoft Graph operation.
