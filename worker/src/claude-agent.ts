@@ -659,6 +659,7 @@ export interface AgentRunOptions {
   task: string;
   graphClient: Client;
   model?: string;
+  conversationHistory?: Array<{role: string; content: string}>;
   onProgress?: (message: string) => void;
   onToolCall?: (toolName: string, input: any) => void;
   onApprovalNeeded?: (toolName: string, input: any) => Promise<boolean>;
@@ -696,9 +697,17 @@ export async function runAgent(
   const maxTurns = options.maxTurns || 15;
   const model = options.model || "claude-sonnet-4-20250514";
 
-  const messages: MessageParam[] = [
-    { role: 'user', content: options.task },
-  ];
+  // Build messages with conversation history for context
+  const messages: MessageParam[] = [];
+  if (options.conversationHistory && options.conversationHistory.length > 0) {
+    for (const msg of options.conversationHistory) {
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+      });
+    }
+  }
+  messages.push({ role: 'user', content: options.task });
 
   const toolsUsed: AgentRunResult['toolsUsed'] = [];
   const generatedFiles: AgentRunResult['generatedFiles'] = [];

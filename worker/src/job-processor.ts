@@ -176,9 +176,30 @@ export class JobProcessor {
       // Build the task prompt from the job
       const task = this.buildTaskPrompt(job);
 
+      // Fetch recent conversation history for context
+      let conversationHistory: Array<{role: string; content: string}> = [];
+      try {
+        const allMessages = await this.convex.query(api.messages.getMessages, {
+          userId: job.userId,
+        });
+        // Take last 20 messages for context
+        const recentMessages = allMessages ? allMessages.slice(-20) : [];
+        if (recentMessages && recentMessages.length > 0) {
+          // Exclude the current message (last user message) and build history
+          // Messages are newest-first, reverse for chronological order
+          conversationHistory = recentMessages
+            .slice(1) // skip the current message
+            .reverse()
+            .map((m: any) => ({ role: m.role, content: m.content }));
+        }
+      } catch (err) {
+        console.log('  ℹ️ Could not fetch conversation history:', err);
+      }
+
       // Run the Claude agent with tools
       const result = await runAgent(anthropicApiKey, {
         task,
+        conversationHistory,
         graphClient,
         model,
         onProgress: (msg) => {
