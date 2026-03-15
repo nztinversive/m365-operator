@@ -689,6 +689,106 @@ IMPORTANT RULES:
 
 You are helpful, efficient, and proactive. Complete the user's task fully — don't just describe what you would do, actually do it using the tools.`;
 
+// Normalize whatever Claude sends for Excel into the expected ExcelWorksheetData[] format.
+// Claude might send: { worksheets: [...] }, { headers: [...], rows: [...] }, { data: [...] },
+// { columns: [...], items: [...] }, or any other creative format.
+function normalizeExcelInput(content: Record<string, any>, fallbackName: string): Array<{
+  name: string;
+  headers: string[];
+  rows: (string | number | boolean | Date)[][];
+  formatting?: { headerRow?: boolean; autoWidth?: boolean };
+}> {
+  // Case 1: Already has worksheets array in expected format
+  if (Array.isArray(content.worksheets) && content.worksheets.length > 0) {
+    return content.worksheets.map((ws: any) => ({
+      name: ws.name || ws.sheet_name || fallbackName,
+      headers: ws.headers || ws.columns || Object.keys(ws.rows?.[0] || {}),
+      rows: normalizeRows(ws.rows || ws.data || ws.items || [], ws.headers || ws.columns),
+      formatting: { headerRow: true, autoWidth: true },
+    }));
+  }
+
+  // Case 2: Flat structure with headers + rows
+  if (content.headers && (content.rows || content.data || content.items)) {
+    return [{
+      name: content.sheet_name || content.name || fallbackName,
+      headers: content.headers,
+      rows: normalizeRows(content.rows || content.data || content.items, content.headers),
+      formatting: { headerRow: true, autoWidth: true },
+    }];
+  }
+
+  // Case 3: columns + data/rows
+  if (content.columns && (content.rows || content.data)) {
+    const headers = Array.isArray(content.columns)
+      ? content.columns.map((c: any) => typeof c === 'string' ? c : c.name || c.header || String(c))
+      : [];
+    return [{
+      name: content.sheet_name || content.name || fallbackName,
+      headers,
+      rows: normalizeRows(content.rows || content.data, headers),
+      formatting: { headerRow: true, autoWidth: true },
+    }];
+  }
+
+  // Case 4: Array of objects (each object = a row)
+  if (Array.isArray(content.data) && content.data.length > 0 && typeof content.data[0] === 'object') {
+    const headers = Object.keys(content.data[0]);
+    return [{
+      name: content.sheet_name || content.name || fallbackName,
+      headers,
+      rows: content.data.map((obj: any) => headers.map(h => obj[h] ?? '')),
+      formatting: { headerRow: true, autoWidth: true },
+    }];
+  }
+
+  // Case 5: Just an array of arrays
+  if (Array.isArray(content.rows) && content.rows.length > 0 && Array.isArray(content.rows[0])) {
+    return [{
+      name: fallbackName,
+      headers: content.rows[0].map(String),
+      rows: content.rows.slice(1),
+      formatting: { headerRow: true, autoWidth: true },
+    }];
+  }
+
+  // Fallback: try to make sense of whatever we got
+  console.warn('Excel normalizer: unrecognized format, creating empty sheet. Input keys:', Object.keys(content));
+  return [{
+    name: fallbackName,
+    headers: ['Data'],
+    rows: [[JSON.stringify(content).substring(0, 500)]],
+    formatting: { headerRow: true, autoWidth: true },
+  }];
+}
+
+// Normalize rows — handle array of objects, array of arrays, or mixed
+function normalizeRows(rows: any[], headers?: string[]): (string | number | boolean | Date)[][] {
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map((row: any) => {
+    // Row is already an array
+    if (Array.isArray(row)) {
+      return row.map((cell: any) => cell ?? '');
+    }
+
+    // Row is an object — extract values in header order
+    if (typeof row === 'object' && row !== null) {
+      if (headers && headers.length > 0) {
+        return headers.map((h: string) => {
+          // Try exact match, then case-insensitive, then snake_case
+          const val = row[h] ?? row[h.toLowerCase()] ?? row[h.replace(/\s+/g, '_').toLowerCase()] ?? '';
+          return val;
+        });
+      }
+      return Object.values(row).map((v: any) => v ?? '');
+    }
+
+    // Primitive value — wrap in array
+    return [String(row)];
+  });
+}
+
 export async function runAgent(
   anthropicApiKey: string,
   options: AgentRunOptions
@@ -809,7 +909,9 @@ export async function runAgent(
             if (fileType === 'word') {
               docBuffer = await generateWordDocument(content.title || fileName, content.sections || []);
             } else if (fileType === 'excel') {
-              docBuffer = await generateExcelWorkbook(content.worksheets || []);
+              // Normalize whatever Claude sends into ExcelWorksheetData[]
+              const worksheets = normalizeExcelInput(content, fileName);
+              docBuffer = await generateExcelWorkbook(worksheets);
             } else if (fileType === 'powerpoint') {
               docBuffer = await generatePowerPointPresentation(content.title || fileName, content.slides || []);
             } else {
