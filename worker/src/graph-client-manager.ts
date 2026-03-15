@@ -82,7 +82,11 @@ export class GraphClientManager {
     tokenInfo: UserTokenInfo
   ): Promise<UserTokenInfo> {
     if (!tokenInfo.refreshToken) {
-      throw new Error(`No refresh token available for user ${userId}`);
+      // Clear the cached expired token so next attempt fetches fresh from Convex
+      this.tokenCache.delete(userId);
+      throw new Error(
+        'Your Microsoft session has expired. Please open the M365 Operator app in your browser to refresh your connection, then try again.'
+      );
     }
 
     try {
