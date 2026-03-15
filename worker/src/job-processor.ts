@@ -216,9 +216,17 @@ export class JobProcessor {
             continue;
           }
 
+          // Ensure correct file extension
+          const extMap: Record<string, string> = { word_document: '.docx', excel_workbook: '.xlsx', powerpoint: '.pptx' };
+          let uploadName = file.name;
+          const ext = extMap[file.type];
+          if (ext && !uploadName.endsWith(ext)) {
+            uploadName = uploadName.replace(/\.\w+$/, '') + ext;
+          }
+
           // Upload to OneDrive
           const uploadResult = await graphClient
-            .api(`/me/drive/root:/M365 Operator/${file.name}:/content`)
+            .api(`/me/drive/root:/M365 Operator/${uploadName}:/content`)
             .put(docBuffer);
 
           uploadedFiles.push({

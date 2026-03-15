@@ -132,8 +132,16 @@ export class M365Tools {
     client: Client,
     fileName: string,
     content: Buffer,
-    folder = 'M365 Operator'
+    folder = 'M365 Operator',
+    fileType?: string
   ): Promise<UploadResult> {
+    // Ensure proper file extension
+    const extMap: Record<string, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' };
+    if (fileType && extMap[fileType] && !fileName.endsWith(extMap[fileType])) {
+      // Strip any existing wrong extension and add the right one
+      fileName = fileName.replace(/\.\w+$/, '') + extMap[fileType];
+    }
+
     try {
       const result = await client
         .api(`/me/drive/root:/${folder}/${fileName}:/content`)
