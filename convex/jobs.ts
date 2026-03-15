@@ -12,6 +12,7 @@ const jobStatus = v.union(
 export const createJob = mutation({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     type: v.string(),
     input: v.optional(v.any()),
   },
@@ -19,6 +20,7 @@ export const createJob = mutation({
     const now = Date.now();
     return await ctx.db.insert("jobs", {
       userId: args.userId,
+      conversationId: args.conversationId,
       type: args.type,
       status: "queued",
       input: args.input,
@@ -63,13 +65,7 @@ export const updateJobStatus = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const patchData: {
-      status: "queued" | "running" | "waiting_approval" | "completed" | "failed";
-      output?: any;
-      error?: string;
-      updatedAt: number;
-      completedAt?: number;
-    } = {
+    const patchData: Record<string, unknown> = {
       status: args.status,
       output: args.output,
       error: args.error,
@@ -136,8 +132,21 @@ export const failJob = mutation({
 });
 
 export const getJobs = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
+  },
   handler: async (ctx, args) => {
+    if (args.conversationId) {
+      return await ctx.db
+        .query("jobs")
+        .withIndex("by_conversationId", (q) =>
+          q.eq("conversationId", args.conversationId)
+        )
+        .order("desc")
+        .take(100);
+    }
+
     return await ctx.db
       .query("jobs")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -153,10 +162,23 @@ export const getJob = query({
   },
 });
 
-// Compatibility aliases for existing callers.
+// Compatibility aliases
 export const list = query({
-  args: { userId: v.id("users") },
+  args: {
+    userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
+  },
   handler: async (ctx, args) => {
+    if (args.conversationId) {
+      return await ctx.db
+        .query("jobs")
+        .withIndex("by_conversationId", (q) =>
+          q.eq("conversationId", args.conversationId)
+        )
+        .order("desc")
+        .take(100);
+    }
+
     return await ctx.db
       .query("jobs")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -175,6 +197,7 @@ export const get = query({
 export const create = mutation({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     type: v.string(),
     input: v.optional(v.any()),
   },
@@ -182,6 +205,7 @@ export const create = mutation({
     const now = Date.now();
     return await ctx.db.insert("jobs", {
       userId: args.userId,
+      conversationId: args.conversationId,
       type: args.type,
       status: "queued",
       input: args.input,

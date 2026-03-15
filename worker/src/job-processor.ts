@@ -179,17 +179,23 @@ export class JobProcessor {
       // Fetch recent conversation history for context
       let conversationHistory: Array<{role: string; content: string}> = [];
       try {
-        const allMessages = await this.convex.query(api.messages.getMessages, {
-          userId: job.userId,
-        });
-        // Take last 20 messages for context
+        let allMessages;
+        if (job.conversationId) {
+          // Scoped: only messages from this conversation
+          allMessages = await this.convex.query(api.messages.getByConversation, {
+            conversationId: job.conversationId,
+          });
+        } else {
+          // Legacy: all messages for user
+          allMessages = await this.convex.query(api.messages.getMessages, {
+            userId: job.userId,
+          });
+        }
         const recentMessages = allMessages ? allMessages.slice(-20) : [];
-        if (recentMessages && recentMessages.length > 0) {
-          // Exclude the current message (last user message) and build history
-          // Messages are newest-first, reverse for chronological order
+        if (recentMessages.length > 0) {
+          // Messages are in asc order; skip the last one (current user message)
           conversationHistory = recentMessages
-            .slice(1) // skip the current message
-            .reverse()
+            .slice(0, -1)
             .map((m: any) => ({ role: m.role, content: m.content }));
         }
       } catch (err) {
@@ -275,6 +281,7 @@ export class JobProcessor {
       if (result.response) {
         await this.convex.mutation(api.messages.addMessage, {
           userId: job.userId,
+          conversationId: job.conversationId,
           jobId: job._id,
           role: 'assistant',
           content: result.response,

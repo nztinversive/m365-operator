@@ -39,17 +39,20 @@ export default defineSchema({
 
   messages: defineTable({
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
     createdAt: v.number(),
   }).index("by_userId", ["userId"])
     .index("by_jobId", ["jobId"])
-    .index("by_userId_jobId", ["userId", "jobId"]),
+    .index("by_userId_jobId", ["userId", "jobId"])
+    .index("by_conversationId", ["conversationId"]),
 
   jobs: defineTable({
     userId: v.id("users"),
-    type: v.string(), // "email_summary", "morning_briefing", etc.
+    conversationId: v.optional(v.id("conversations")),
+    type: v.string(),
     status: v.union(
       v.literal("queued"),
       v.literal("running"),
@@ -60,20 +63,21 @@ export default defineSchema({
     input: v.optional(v.any()),
     output: v.optional(v.any()),
     error: v.optional(v.string()),
-    progress: v.optional(v.number()), // 0-100
+    progress: v.optional(v.number()),
     progressMessage: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_conversationId", ["conversationId"]),
 
   approvals: defineTable({
     jobId: v.id("jobs"),
     userId: v.id("users"),
-    action: v.string(), // "send_email", "post_teams", "overwrite_file"
+    action: v.string(),
     description: v.string(),
-    details: v.optional(v.any()), // preview content
+    details: v.optional(v.any()),
     status: v.union(
       v.literal("pending"),
       v.literal("approved"),
@@ -89,7 +93,7 @@ export default defineSchema({
     jobId: v.optional(v.id("jobs")),
     name: v.string(),
     type: v.union(v.literal("docx"), v.literal("xlsx"), v.literal("pptx"), v.literal("pdf")),
-    driveItemId: v.optional(v.string()), // OneDrive item ID
+    driveItemId: v.optional(v.string()),
     webUrl: v.optional(v.string()),
     size: v.optional(v.number()),
     createdAt: v.number(),

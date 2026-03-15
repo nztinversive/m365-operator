@@ -6,6 +6,7 @@ const messageRole = v.union(v.literal("user"), v.literal("assistant"), v.literal
 export const addMessage = mutation({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
     role: messageRole,
     content: v.string(),
@@ -13,6 +14,7 @@ export const addMessage = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("messages", {
       userId: args.userId,
+      conversationId: args.conversationId,
       jobId: args.jobId,
       role: args.role,
       content: args.content,
@@ -24,6 +26,7 @@ export const addMessage = mutation({
 export const getMessages = query({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
   },
   handler: async (ctx, args) => {
@@ -37,6 +40,17 @@ export const getMessages = query({
         .collect();
     }
 
+    if (args.conversationId) {
+      return await ctx.db
+        .query("messages")
+        .withIndex("by_conversationId", (q) =>
+          q.eq("conversationId", args.conversationId)
+        )
+        .order("asc")
+        .collect();
+    }
+
+    // Fallback: messages with no conversationId (legacy)
     return await ctx.db
       .query("messages")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -45,10 +59,27 @@ export const getMessages = query({
   },
 });
 
-// Compatibility aliases for existing callers.
+// Get messages by conversation for worker context
+export const getByConversation = query({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_conversationId", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("asc")
+      .collect();
+  },
+});
+
+// Compatibility aliases
 export const send = mutation({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
     role: messageRole,
     content: v.string(),
@@ -56,6 +87,7 @@ export const send = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("messages", {
       userId: args.userId,
+      conversationId: args.conversationId,
       jobId: args.jobId,
       role: args.role,
       content: args.content,
@@ -67,6 +99,7 @@ export const send = mutation({
 export const list = query({
   args: {
     userId: v.id("users"),
+    conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
   },
   handler: async (ctx, args) => {
@@ -75,6 +108,16 @@ export const list = query({
         .query("messages")
         .withIndex("by_userId_jobId", (q) =>
           q.eq("userId", args.userId).eq("jobId", args.jobId)
+        )
+        .order("asc")
+        .collect();
+    }
+
+    if (args.conversationId) {
+      return await ctx.db
+        .query("messages")
+        .withIndex("by_conversationId", (q) =>
+          q.eq("conversationId", args.conversationId)
         )
         .order("asc")
         .collect();
