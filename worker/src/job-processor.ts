@@ -227,6 +227,30 @@ export class JobProcessor {
         console.log('  ℹ️ Could not fetch conversation history:', err);
       }
 
+      // Tool-name → user-friendly progress message map
+      const toolProgressMessages: Record<string, string> = {
+        read_emails: 'Reading emails…',
+        search_emails: 'Searching emails…',
+        send_email: 'Sending email…',
+        reply_to_email: 'Replying to email…',
+        get_calendar_events: 'Checking calendar…',
+        create_calendar_event: 'Creating calendar event…',
+        generate_word_document: 'Generating Word document…',
+        generate_excel_workbook: 'Generating Excel workbook…',
+        generate_powerpoint: 'Generating PowerPoint presentation…',
+        upload_file: 'Uploading to OneDrive…',
+        list_drive_files: 'Browsing OneDrive files…',
+        read_drive_file: 'Reading file from OneDrive…',
+        send_teams_message: 'Sending Teams message…',
+        list_teams_channels: 'Listing Teams channels…',
+        create_todo_task: 'Creating To-Do task…',
+        list_todo_tasks: 'Checking To-Do tasks…',
+      };
+
+      // Track progress percentage across tool calls
+      const expectedTools = 5; // reasonable default; progress caps at 90% to leave room for completion
+      let toolCallCount = 0;
+
       // Run the Claude agent with tools
       const result = await runAgent(anthropicApiKey, {
         task,
@@ -237,6 +261,13 @@ export class JobProcessor {
           this.updateJobProgress(job._id, msg);
         },
         onToolCall: (name, input) => {
+          toolCallCount++;
+          const progressPct = Math.min(90, Math.round((toolCallCount / expectedTools) * 90));
+          const friendlyMsg = toolProgressMessages[name] || `Running ${name}…`;
+
+          // Update progress with both message and percentage
+          this.updateJobStatus(job._id, 'running', undefined, undefined, progressPct, friendlyMsg);
+
           console.log(`  🔧 ${name}(${JSON.stringify(input).substring(0, 100)}...)`);
           this.audit(job.userId, 'tool_executed', job._id, {
             tool: name,
