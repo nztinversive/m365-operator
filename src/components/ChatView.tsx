@@ -18,6 +18,8 @@ import {
   Sparkles,
   Plus,
   MessageSquare,
+  ShieldCheck,
+  ShieldX,
   PanelLeftClose,
   PanelLeft,
 } from "lucide-react";
@@ -120,6 +122,9 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
   const addMessage = useMutation(api.messages.addMessage);
   const createJob = useMutation(api.jobs.createJob);
+  const pendingApprovals = useQuery(api.approvals.getPendingApprovals, { userId });
+  const approveAction = useMutation(api.approvals.approveAction);
+  const rejectAction = useMutation(api.approvals.rejectAction);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -499,6 +504,58 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               </div>
             </div>
           )}
+
+          {/* Pending approval cards */}
+          {pendingApprovals && pendingApprovals.length > 0 && pendingApprovals.map((approval: any) => (
+            <div key={approval._id} className="flex gap-3">
+              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-amber-600/20 text-amber-400">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div className="max-w-[80%] rounded-xl border border-amber-600/30 bg-amber-950/30 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wider text-amber-400">
+                  Approval Required
+                </p>
+                <p className="mt-1 text-sm text-gray-200">
+                  {approval.description}
+                </p>
+                {approval.details && (
+                  <div className="mt-2 rounded-lg bg-gray-800/50 p-2 text-xs text-gray-400">
+                    {approval.details.to && <p><span className="text-gray-300">To:</span> {approval.details.to}</p>}
+                    {approval.details.subject && <p><span className="text-gray-300">Subject:</span> {approval.details.subject}</p>}
+                    {approval.details.body && <p className="mt-1 line-clamp-3">{typeof approval.details.body === 'string' ? approval.details.body : approval.details.body?.content?.substring(0, 200)}</p>}
+                  </div>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await approveAction({ approvalId: approval._id });
+                      } catch (err) {
+                        console.error("Approve failed:", err);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Approve
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await rejectAction({ approvalId: approval._id });
+                      } catch (err) {
+                        console.error("Reject failed:", err);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
+                  >
+                    <ShieldX className="h-3.5 w-3.5" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
 
           <div ref={messagesEndRef} />
         </div>
