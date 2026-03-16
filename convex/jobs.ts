@@ -147,11 +147,8 @@ export const getJobs = query({
         .take(100);
     }
 
-    return await ctx.db
-      .query("jobs")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .take(100);
+    // No conversationId — return empty to match messages behavior
+    return [];
   },
 });
 

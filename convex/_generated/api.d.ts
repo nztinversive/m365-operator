@@ -17,7 +17,6 @@ import type * as jobs from "../jobs.js";
 import type * as memories from "../memories.js";
 import type * as messages from "../messages.js";
 import type * as microsoftConnections from "../microsoftConnections.js";
-import type * as migrateMessages from "../migrateMessages.js";
 import type * as userSettings from "../userSettings.js";
 import type * as users from "../users.js";
 
@@ -37,7 +36,6 @@ declare const fullApi: ApiFromModules<{
   memories: typeof memories;
   messages: typeof messages;
   microsoftConnections: typeof microsoftConnections;
-  migrateMessages: typeof migrateMessages;
   userSettings: typeof userSettings;
   users: typeof users;
 }>;
