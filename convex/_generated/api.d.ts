@@ -11,6 +11,7 @@
 import type * as approvals from "../approvals.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as conversations from "../conversations.js";
+import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as jobs from "../jobs.js";
 import type * as memories from "../memories.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   approvals: typeof approvals;
   auditLogs: typeof auditLogs;
   conversations: typeof conversations;
+  crons: typeof crons;
   documents: typeof documents;
   jobs: typeof jobs;
   memories: typeof memories;

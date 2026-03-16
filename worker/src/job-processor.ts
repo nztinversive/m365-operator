@@ -44,6 +44,7 @@ export interface JobExecution {
   jobId: string;
   startTime: number;
   timeoutHandle?: NodeJS.Timeout;
+  heartbeatHandle?: NodeJS.Timeout;
 }
 
 export class JobProcessor {
@@ -97,6 +98,7 @@ export class JobProcessor {
 
     for (const [jobId, exec] of this.activeJobs.entries()) {
       if (exec.timeoutHandle) clearTimeout(exec.timeoutHandle);
+      if (exec.heartbeatHandle) clearInterval(exec.heartbeatHandle);
       await this.updateJobStatus(jobId, 'cancelled', undefined, 'Worker shutdown');
     }
     this.activeJobs.clear();
@@ -140,9 +142,24 @@ export class JobProcessor {
       const execution: JobExecution = { jobId: job._id, startTime: Date.now() };
       execution.timeoutHandle = setTimeout(async () => {
         console.log(`⏰ Job ${job._id} timed out`);
+        const timedOut = this.activeJobs.get(job._id);
+        if (timedOut?.heartbeatHandle) clearInterval(timedOut.heartbeatHandle);
         await this.updateJobStatus(job._id, 'failed', undefined, 'Job timed out');
         this.activeJobs.delete(job._id);
       }, this.config.jobTimeout);
+
+      // Heartbeat: update updatedAt every 30s so the stale-job recovery
+      // cron knows this job is still alive.
+      execution.heartbeatHandle = setInterval(async () => {
+        try {
+          await this.convex.mutation(this.updateStatusRef, {
+            id: job._id,
+            status: 'running',
+          });
+        } catch (err) {
+          console.error(`❌ Heartbeat failed for job ${job._id}:`, err);
+        }
+      }, 30_000);
 
       this.activeJobs.set(job._id, execution);
       await this.executeJob(job);
@@ -301,6 +318,7 @@ export class JobProcessor {
     } finally {
       const exec = this.activeJobs.get(job._id);
       if (exec?.timeoutHandle) clearTimeout(exec.timeoutHandle);
+      if (exec?.heartbeatHandle) clearInterval(exec.heartbeatHandle);
       this.activeJobs.delete(job._id);
     }
   }
@@ -364,6 +382,7 @@ export class JobProcessor {
       // Clean up active job tracking
       const exec = this.activeJobs.get(job._id);
       if (exec?.timeoutHandle) clearTimeout(exec.timeoutHandle);
+      if (exec?.heartbeatHandle) clearInterval(exec.heartbeatHandle);
       this.activeJobs.delete(job._id);
 
       return true;

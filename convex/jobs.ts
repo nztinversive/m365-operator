@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 const jobStatus = v.union(
@@ -252,5 +252,37 @@ export const getQueued = query({
       .withIndex("by_status", (q) => q.eq("status", "queued"))
       .order("asc")
       .take(10);
+  },
+});
+
+// ─── Stale job recovery ─────────────────────────────────────────────
+// Finds jobs stuck in "running" with no heartbeat for 5+ minutes
+// and requeues them so they get picked up again.
+export const recoverStaleJobs = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    const cutoff = Date.now() - STALE_THRESHOLD_MS;
+
+    const runningJobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .collect();
+
+    let recovered = 0;
+    for (const job of runningJobs) {
+      if (job.updatedAt < cutoff) {
+        await ctx.db.patch(job._id, {
+          status: "queued",
+          progressMessage: "Recovered from stale state",
+          updatedAt: Date.now(),
+        });
+        recovered++;
+      }
+    }
+
+    if (recovered > 0) {
+      console.log(`♻️ Recovered ${recovered} stale job(s)`);
+    }
   },
 });
