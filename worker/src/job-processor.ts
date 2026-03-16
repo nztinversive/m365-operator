@@ -57,6 +57,7 @@ export class JobProcessor {
   private readonly getApprovalsByJobRef = api.approvals!.getByJobId as unknown as FunctionReference<'query'>;
   private readonly createDocumentRef = api.documents!.create as unknown as FunctionReference<'mutation'>;
   private readonly getActiveApiKeyRef = api.userSettings!.getActiveApiKey as unknown as FunctionReference<'query'>;
+  private readonly auditLogRef = api.auditLogs!.log as unknown as FunctionReference<'mutation'>;
 
   constructor(
     private convex: ConvexHttpClient,
@@ -138,6 +139,7 @@ export class JobProcessor {
     try {
       await this.updateJobStatus(job._id, 'running', undefined, undefined, 0);
       console.log(`🏃 Job ${job._id} (${job.type})`);
+      await this.audit(job.userId, 'job_started', job._id, { type: job.type });
 
       const execution: JobExecution = { jobId: job._id, startTime: Date.now() };
       execution.timeoutHandle = setTimeout(async () => {
@@ -236,6 +238,10 @@ export class JobProcessor {
         },
         onToolCall: (name, input) => {
           console.log(`  🔧 ${name}(${JSON.stringify(input).substring(0, 100)}...)`);
+          this.audit(job.userId, 'tool_executed', job._id, {
+            tool: name,
+            input: JSON.stringify(input).substring(0, 200),
+          });
         },
         onApprovalNeeded: async (toolName, input) => {
           const alreadyApproved = await this.hasApprovedAction(job._id, toolName, input);
@@ -245,6 +251,7 @@ export class JobProcessor {
 
           // Create an approval request in Convex and pause the job
           await this.requestApproval(job._id, job.userId, toolName, input);
+          await this.audit(job.userId, 'approval_requested', job._id, { tool: toolName });
           return false; // Don't auto-approve; wait for user
         },
       });
@@ -336,9 +343,16 @@ export class JobProcessor {
       }
 
       console.log(`✅ Job ${job._id} ${status} (${result.toolsUsed.length} tools, ${uploadedFiles.length} files)`);
+      await this.audit(job.userId, status === 'completed' ? 'job_completed' : 'job_waiting_approval', job._id, {
+        toolsUsed: result.toolsUsed.length,
+        filesUploaded: uploadedFiles.length,
+      });
     } catch (error) {
       console.error(`❌ Job ${job._id} failed:`, error);
       await this.updateJobStatus(job._id, 'failed', undefined, error instanceof Error ? error.message : 'Unknown');
+      await this.audit(job.userId, 'job_failed', job._id, {
+        error: error instanceof Error ? error.message.substring(0, 200) : 'Unknown',
+      });
     } finally {
       const exec = this.activeJobs.get(job._id);
       if (exec?.timeoutHandle) clearTimeout(exec.timeoutHandle);
@@ -360,6 +374,10 @@ export class JobProcessor {
       if (approved.length === 0) return false;
 
       console.log(`⚡ Job ${job._id} resuming from approval (${approved.length} approved action(s))`);
+      await this.audit(job.userId, 'approval_granted', job._id, {
+        count: approved.length,
+        actions: approved.map((a) => a.action),
+      });
 
       // We need a Graph client to execute the tool calls
       const graphClient = await this.graphManager.getClientForUser(job.userId);
@@ -445,6 +463,24 @@ export class JobProcessor {
 
       default:
         return job.input?.message || `Process this ${job.type} job.`;
+    }
+  }
+
+  private async audit(
+    userId: string,
+    action: string,
+    jobId?: string,
+    details?: Record<string, any>
+  ): Promise<void> {
+    try {
+      await this.convex.mutation(this.auditLogRef, {
+        userId,
+        jobId: jobId || undefined,
+        action,
+        details: details || undefined,
+      });
+    } catch (err) {
+      console.error(`⚠️ Audit log failed (${action}):`, err);
     }
   }
 
