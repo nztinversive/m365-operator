@@ -5,7 +5,7 @@ import { join } from 'path';
 import { api } from '../../convex/_generated/api.js';
 import type { Id } from '../../convex/_generated/dataModel';
 import { GraphClientManager } from './graph-client-manager.js';
-import { runAgent, type AgentRunResult } from './claude-agent.js';
+import { runAgent, ToolExecutor, type AgentRunResult } from './claude-agent.js';
 import {
   generateWordDocument,
   generateExcelWorkbook,
@@ -155,6 +155,12 @@ export class JobProcessor {
 
   private async executeJob(job: Job): Promise<void> {
     try {
+      // ─── Fast path: resume after approval ─────────────────────────
+      // If this job has approved approvals, skip the agent loop entirely
+      // and directly execute the approved tool calls.
+      const approvedResume = await this.tryResumeFromApproval(job);
+      if (approvedResume) return;
+
       const activeAiConfig = await this.convex.query(this.getActiveApiKeyRef, {
         userId: job.userId,
       }) as {
@@ -296,6 +302,74 @@ export class JobProcessor {
       const exec = this.activeJobs.get(job._id);
       if (exec?.timeoutHandle) clearTimeout(exec.timeoutHandle);
       this.activeJobs.delete(job._id);
+    }
+  }
+
+  // ─── Resume from approval: skip agent loop, execute approved actions directly ──
+  private async tryResumeFromApproval(job: Job): Promise<boolean> {
+    try {
+      const approvals = await this.convex.query(this.getApprovalsByJobRef, {
+        jobId: job._id,
+      }) as Array<{ _id: any; action: string; details: any; status: string }> | null;
+
+      if (!approvals || approvals.length === 0) return false;
+
+      const approved = approvals.filter((a) => a.status === 'approved');
+      if (approved.length === 0) return false;
+
+      console.log(`⚡ Job ${job._id} resuming from approval (${approved.length} approved action(s))`);
+
+      // We need a Graph client to execute the tool calls
+      const graphClient = await this.graphManager.getClientForUser(job.userId);
+      const toolExecutor = new ToolExecutor(graphClient);
+
+      const toolsUsed: Array<{ name: string; input: any }> = [];
+      const results: string[] = [];
+
+      for (const approval of approved) {
+        const toolName = approval.action;
+        const toolInput = approval.details || {};
+
+        console.log(`  🔧 Executing approved: ${toolName}(${JSON.stringify(toolInput).substring(0, 100)}...)`);
+        await this.updateJobProgress(job._id, `Executing approved action: ${toolName}`);
+
+        const result = await toolExecutor.execute(toolName, toolInput);
+        toolsUsed.push({ name: toolName, input: toolInput });
+        results.push(`**${toolName}**: ${result}`);
+      }
+
+      // Build a summary response
+      const response = results.length === 1
+        ? `✅ Approved action executed successfully.\n\n${results[0]}`
+        : `✅ ${results.length} approved actions executed successfully.\n\n${results.join('\n\n')}`;
+
+      await this.updateJobStatus(job._id, 'completed', {
+        response,
+        toolsUsed,
+        files: [],
+        approvalsPending: [],
+      }, undefined, 100);
+
+      // Save the assistant response as a message
+      await this.convex.mutation(api.messages.addMessage, {
+        userId: job.userId,
+        conversationId: job.conversationId,
+        jobId: job._id,
+        role: 'assistant',
+        content: response,
+      });
+
+      console.log(`✅ Job ${job._id} completed via approval resume (${toolsUsed.length} tools)`);
+
+      // Clean up active job tracking
+      const exec = this.activeJobs.get(job._id);
+      if (exec?.timeoutHandle) clearTimeout(exec.timeoutHandle);
+      this.activeJobs.delete(job._id);
+
+      return true;
+    } catch (error) {
+      console.error(`❌ Approval resume failed for job ${job._id}, falling back to agent loop:`, error);
+      return false;
     }
   }
 
