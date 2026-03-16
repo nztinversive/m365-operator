@@ -95,17 +95,22 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
   ]);
 
   // Wait for MSAL to fully initialize before showing login screen.
-  // useIsAuthenticated can briefly return false during init even with cached accounts.
   const allAccounts = instance.getAllAccounts();
   if (!isAuthenticated && allAccounts.length === 0 && !account) {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  // Still initializing — MSAL has accounts but hasn't set active yet
+  // Still initializing
   if (!account && allAccounts.length > 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-b-transparent" />
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: "var(--bg-base)" }}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-b-transparent"
+          style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -116,10 +121,17 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
 
   if (setupError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 px-6 text-center">
-        <div>
-          <p className="text-lg font-semibold text-red-400">Account setup failed</p>
-          <p className="mt-2 text-sm text-gray-300">{setupError}</p>
+      <div
+        className="flex min-h-screen items-center justify-center px-6 text-center"
+        style={{ background: "var(--bg-base)" }}
+      >
+        <div className="animate-scale-in">
+          <p className="text-lg font-semibold" style={{ color: "var(--error)" }}>
+            Account setup failed
+          </p>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+            {setupError}
+          </p>
         </div>
       </div>
     );
@@ -127,14 +139,20 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
 
   if (user === undefined || user === null || isCreatingUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-b-transparent" />
+      <div
+        className="flex min-h-screen items-center justify-center"
+        style={{ background: "var(--bg-base)" }}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-b-transparent"
+          style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen" style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}>
       <Sidebar
         account={account}
         onLogout={() => {
@@ -145,7 +163,9 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
 
       <main
         className={`lg:pl-72 ${
-          fullHeight ? "h-[calc(100dvh-4rem)] lg:h-screen" : "min-h-[calc(100dvh-4rem)] lg:min-h-screen"
+          fullHeight
+            ? "h-[calc(100dvh-4rem)] lg:h-screen"
+            : "min-h-[calc(100dvh-4rem)] lg:min-h-screen"
         }`}
       >
         <div className={fullHeight ? "h-full" : "mx-auto max-w-7xl px-4 py-6 lg:px-10 lg:py-8"}>

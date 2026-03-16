@@ -55,56 +55,85 @@ export function ApprovalsPage({ userId }: ApprovalsPageProps) {
     });
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-in space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Approvals</h1>
-        <p className="mt-1 text-sm text-gray-400">
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          Approvals
+        </h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
           Review and approve actions before they execute
         </p>
       </div>
 
       {/* Pending Approvals */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-gray-200">
+        <h2 className="mb-4 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
           Pending{" "}
           {pendingApprovals && pendingApprovals.length > 0 && (
-            <span className="ml-2 rounded-full bg-orange-500/20 px-2.5 py-0.5 text-sm text-orange-400">
+            <span
+              className="ml-2 rounded-full px-2.5 py-0.5 text-sm font-medium"
+              style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+            >
               {pendingApprovals.length}
             </span>
           )}
         </h2>
 
         {pendingApprovals === undefined ? (
-          <div className="flex items-center gap-2 text-gray-500">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-b-transparent" />
-            Loading…
+          <div className="flex items-center gap-2" style={{ color: "var(--text-ghost)" }}>
+            <div
+              className="h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"
+              style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
+            />
+            Loading...
           </div>
         ) : pendingApprovals.length === 0 ? (
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center text-gray-500">
-            No pending approvals — you&apos;re all clear ✓
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{
+              background: "var(--glass-bg)",
+              border: "1px solid var(--glass-border)",
+              color: "var(--text-ghost)",
+            }}
+          >
+            No pending approvals — you&apos;re all clear
           </div>
         ) : (
           <div className="space-y-3">
             {pendingApprovals.map((approval: any) => (
               <div
                 key={approval._id}
-                className="rounded-lg border border-orange-500/30 bg-gray-900 p-4"
+                className="animate-slide-up rounded-2xl p-5"
+                style={{
+                  background: "rgba(251, 191, 36, 0.03)",
+                  border: "1px solid rgba(251, 191, 36, 0.15)",
+                }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="rounded bg-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-400">
+                      <span
+                        className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                        style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+                      >
                         Needs Approval
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm" style={{ color: "var(--text-ghost)" }}>
                         {formatTime(approval._creationTime)}
                       </span>
                     </div>
-                    <h3 className="mt-2 text-base font-medium text-white">
+                    <h3 className="mt-2 text-base font-medium" style={{ color: "var(--text-primary)" }}>
                       {formatToolName(approval.action)}
                     </h3>
                     {approval.details && (
-                      <pre className="mt-2 max-h-40 overflow-auto rounded bg-gray-800 p-3 text-xs text-gray-300">
+                      <pre
+                        className="mt-2 max-h-40 overflow-auto rounded-xl p-3 text-xs scrollbar-thin"
+                        style={{
+                          background: "var(--glass-bg-strong)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
                         {JSON.stringify(approval.details, null, 2)}
                       </pre>
                     )}
@@ -114,16 +143,24 @@ export function ApprovalsPage({ userId }: ApprovalsPageProps) {
                   <button
                     onClick={() => handleApprove(approval._id)}
                     disabled={processing.has(approval._id)}
-                    className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-500 disabled:opacity-50"
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50"
+                    style={{
+                      background: "var(--success)",
+                      boxShadow: "0 2px 8px rgba(52, 211, 153, 0.2)",
+                    }}
                   >
-                    {processing.has(approval._id) ? "Approving…" : "✓ Approve"}
+                    {processing.has(approval._id) ? "Approving..." : "Approve"}
                   </button>
                   <button
                     onClick={() => handleReject(approval._id)}
                     disabled={processing.has(approval._id)}
-                    className="rounded-md bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50"
+                    style={{
+                      background: "var(--error)",
+                      boxShadow: "0 2px 8px rgba(251, 113, 133, 0.2)",
+                    }}
                   >
-                    {processing.has(approval._id) ? "Rejecting…" : "✗ Reject"}
+                    {processing.has(approval._id) ? "Rejecting..." : "Reject"}
                   </button>
                 </div>
               </div>
@@ -134,36 +171,48 @@ export function ApprovalsPage({ userId }: ApprovalsPageProps) {
 
       {/* History */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-gray-200">History</h2>
+        <h2 className="mb-4 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+          History
+        </h2>
         {approvalHistory === undefined ? (
-          <div className="flex items-center gap-2 text-gray-500">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-b-transparent" />
-            Loading…
+          <div className="flex items-center gap-2" style={{ color: "var(--text-ghost)" }}>
+            <div
+              className="h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"
+              style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
+            />
+            Loading...
           </div>
         ) : approvalHistory.length === 0 ? (
-          <p className="text-sm text-gray-500">No approval history yet</p>
+          <p className="text-sm" style={{ color: "var(--text-ghost)" }}>
+            No approval history yet
+          </p>
         ) : (
           <div className="space-y-2">
             {approvalHistory.map((approval: any) => (
               <div
                 key={approval._id}
-                className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/50 p-3"
+                className="flex items-center justify-between rounded-xl p-3.5 transition-all duration-150"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                }}
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`rounded px-2 py-0.5 text-xs font-medium ${
+                    className="rounded-lg px-2 py-0.5 text-xs font-semibold"
+                    style={
                       approval.status === "approved"
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-red-500/20 text-red-400"
-                    }`}
+                        ? { background: "var(--success-bg)", color: "var(--success)" }
+                        : { background: "var(--error-bg)", color: "var(--error)" }
+                    }
                   >
                     {approval.status === "approved" ? "Approved" : "Rejected"}
                   </span>
-                  <span className="text-sm text-gray-300">
+                  <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                     {formatToolName(approval.action)}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs" style={{ color: "var(--text-ghost)" }}>
                   {approval.decidedAt ? formatTime(approval.decidedAt) : ""}
                 </span>
               </div>

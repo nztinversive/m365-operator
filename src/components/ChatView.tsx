@@ -79,22 +79,24 @@ function formatConversationTime(timestamp: number): string {
 }
 
 const assistantMarkdownClassName = [
-  "text-sm leading-relaxed text-gray-200",
-  "[&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:text-white sm:[&_h1]:text-2xl",
-  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white sm:[&_h2]:text-xl",
-  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-white sm:[&_h3]:text-lg",
+  "text-sm leading-relaxed",
+  "[&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-semibold sm:[&_h1]:text-2xl",
+  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold sm:[&_h2]:text-xl",
+  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold sm:[&_h3]:text-lg",
+  "[&_h1]:text-[var(--text-primary)] [&_h2]:text-[var(--text-primary)] [&_h3]:text-[var(--text-primary)]",
   "[&_p]:my-2",
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_li]:my-1",
-  "[&_a]:text-blue-300 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-blue-200",
-  "[&_code]:rounded [&_code]:bg-gray-700/60 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs",
-  "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-gray-900 [&_pre]:p-3 [&_pre]:text-xs",
+  "[&_a]:text-[var(--accent-light)] [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-[var(--accent)]",
+  "[&_code]:rounded-md [&_code]:bg-[rgba(255,255,255,0.06)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs",
+  "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:p-3 [&_pre]:text-xs",
+  "[&_pre]:bg-[rgba(0,0,0,0.3)] [&_pre]:border [&_pre]:border-[rgba(255,255,255,0.04)]",
   "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
   "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs sm:[&_table]:text-sm",
-  "[&_th]:border [&_th]:border-gray-600 [&_th]:bg-gray-700/70 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:text-gray-100 sm:[&_th]:px-3 sm:[&_th]:py-2",
-  "[&_td]:border [&_td]:border-gray-700 [&_td]:px-2 [&_td]:py-1.5 sm:[&_td]:px-3 sm:[&_td]:py-2",
-  "[&_tbody_tr:nth-child(even)]:bg-gray-800/60",
+  "[&_th]:border [&_th]:border-[rgba(255,255,255,0.08)] [&_th]:bg-[rgba(255,255,255,0.04)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left sm:[&_th]:px-3 sm:[&_th]:py-2",
+  "[&_td]:border [&_td]:border-[rgba(255,255,255,0.06)] [&_td]:px-2 [&_td]:py-1.5 sm:[&_td]:px-3 sm:[&_td]:py-2",
+  "[&_tbody_tr:nth-child(even)]:bg-[rgba(255,255,255,0.02)]",
 ].join(" ");
 
 export function ChatView({ account, onLogout, userId }: ChatViewProps) {
@@ -289,46 +291,67 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
   };
 
   return (
-    <div className="flex h-full bg-gray-950">
+    <div className="flex h-full" style={{ background: "var(--bg-base)" }}>
       {/* Mobile overlay backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-20 lg:hidden"
+          style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Conversation sidebar — overlay on mobile, inline on desktop */}
+      {/* Conversation sidebar */}
       <div
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden"
-        } fixed inset-y-0 left-0 z-30 w-72 border-r border-gray-800 bg-gray-900 transition-transform duration-200 lg:static lg:z-auto ${
+        } fixed inset-y-0 left-0 z-30 w-72 transition-transform duration-200 lg:static lg:z-auto ${
           sidebarOpen ? "lg:w-64" : ""
         }`}
+        style={{
+          background: "var(--bg-surface)",
+          borderRight: "1px solid var(--glass-border)",
+        }}
       >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-gray-800 px-3 py-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <div
+            className="flex items-center justify-between px-3 py-3"
+            style={{ borderBottom: "1px solid var(--glass-border)" }}
+          >
+            <span
+              className="text-[11px] font-semibold uppercase tracking-widest"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Conversations
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={handleNewConversation}
-                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+                className="rounded-lg p-1.5 transition-all duration-200"
+                style={{ color: "var(--text-tertiary)" }}
                 title="New conversation"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--glass-bg-hover)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "";
+                  e.currentTarget.style.color = "var(--text-tertiary)";
+                }}
               >
                 <Plus className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white lg:hidden"
+                className="rounded-lg p-1.5 transition-all duration-200 lg:hidden"
+                style={{ color: "var(--text-tertiary)" }}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
             {conversations?.map((conv) => (
               <button
                 key={conv._id}
@@ -336,16 +359,29 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
                   setActiveConversationId(conv._id);
                   setSidebarOpen(false);
                 }}
-                className={`flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors ${
+                className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-all duration-150"
+                style={
                   activeConversationId === conv._id
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
-                }`}
+                    ? { background: "var(--glass-bg-strong)", color: "var(--text-primary)" }
+                    : { color: "var(--text-tertiary)" }
+                }
+                onMouseEnter={(e) => {
+                  if (activeConversationId !== conv._id) {
+                    e.currentTarget.style.background = "var(--glass-bg)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeConversationId !== conv._id) {
+                    e.currentTarget.style.background = "";
+                    e.currentTarget.style.color = "var(--text-tertiary)";
+                  }
+                }}
               >
                 <MessageSquare className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{conv.title}</p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[10px]" style={{ color: "var(--text-ghost)" }}>
                     {formatConversationTime(conv.updatedAt)}
                   </p>
                 </div>
@@ -353,7 +389,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
             ))}
 
             {conversations?.length === 0 && (
-              <div className="px-3 py-6 text-center text-xs text-gray-500">
+              <div className="px-3 py-6 text-center text-xs" style={{ color: "var(--text-ghost)" }}>
                 No conversations yet
               </div>
             )}
@@ -364,12 +400,29 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
       {/* Main chat area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-3 py-2 sm:px-4 sm:py-3">
+        <header
+          className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3"
+          style={{
+            background: "rgba(18, 19, 26, 0.7)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              className="rounded-lg p-1.5 transition-all duration-200"
+              style={{ color: "var(--text-tertiary)" }}
               title={sidebarOpen ? "Close sidebar" : "Open conversations"}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--glass-bg-hover)";
+                e.currentTarget.style.color = "var(--text-primary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "";
+                e.currentTarget.style.color = "var(--text-tertiary)";
+              }}
             >
               {sidebarOpen ? (
                 <PanelLeftClose className="h-4 w-4" />
@@ -378,20 +431,42 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               )}
             </button>
 
-            <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+            <div
+              className="hidden h-8 w-8 items-center justify-center rounded-lg sm:flex"
+              style={{
+                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                boxShadow: "0 2px 8px var(--accent-glow)",
+              }}
+            >
               <span className="text-sm font-bold text-white">M</span>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-sm font-semibold text-white">M365 Operator</h1>
-              <p className="text-xs text-gray-500">{account.username}</p>
+              <h1 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                M365 Operator
+              </h1>
+              <p className="text-[11px]" style={{ color: "var(--text-ghost)" }}>
+                {account.username}
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleNewConversation}
-              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 sm:px-3"
+              className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 sm:px-3"
+              style={{
+                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                boxShadow: "0 2px 8px var(--accent-glow)",
+              }}
               title="New conversation"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "0 4px 16px rgba(99, 102, 241, 0.3)";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "0 2px 8px var(--accent-glow)";
+                e.currentTarget.style.transform = "";
+              }}
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New Chat</span>
@@ -399,75 +474,82 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           </div>
         </header>
 
-        {/* Quick action buttons — horizontally scrollable on mobile */}
-        <div className="flex gap-2 overflow-x-auto border-b border-gray-800/50 px-3 py-2 scrollbar-none sm:px-4">
-          <button
-            onClick={() => void handleSend("Summarize my unread emails", true)}
-            disabled={isSubmitting}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
-          >
-            <Mail className="h-3 w-3" />
-            Emails
-          </button>
-
-          <button
-            onClick={() => void handleSend("What's on my calendar today?", true)}
-            disabled={isSubmitting}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
-          >
-            <Calendar className="h-3 w-3" />
-            Calendar
-          </button>
-
-          <button
-            onClick={() =>
-              void handleSend(
-                "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.",
-                true
-              )
-            }
-            disabled={isSubmitting}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
-          >
-            <Sparkles className="h-3 w-3" />
-            Briefing
-          </button>
-
-          <button
-            onClick={() =>
-              void handleSend(
-                "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.",
-                true
-              )
-            }
-            disabled={isSubmitting}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
-          >
-            📊 Deck
-          </button>
-
-          <button
-            onClick={() =>
-              void handleSend(
-                "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.",
-                true
-              )
-            }
-            disabled={isSubmitting}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
-          >
-            📋 Tracker
-          </button>
+        {/* Quick action buttons */}
+        <div
+          className="flex gap-2 overflow-x-auto px-3 py-2.5 scrollbar-none sm:px-4"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
+        >
+          {[
+            { label: "Emails", icon: Mail, prompt: "Summarize my unread emails" },
+            { label: "Calendar", icon: Calendar, prompt: "What's on my calendar today?" },
+            {
+              label: "Briefing",
+              icon: Sparkles,
+              prompt: "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.",
+            },
+            {
+              label: "Deck",
+              icon: null,
+              emoji: "\u{1F4CA}",
+              prompt: "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.",
+            },
+            {
+              label: "Tracker",
+              icon: null,
+              emoji: "\u{1F4CB}",
+              prompt: "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.",
+            },
+          ].map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.label}
+                onClick={() => void handleSend(action.prompt, true)}
+                disabled={isSubmitting}
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-40"
+                style={{
+                  background: "var(--glass-bg)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-secondary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSubmitting) {
+                    e.currentTarget.style.background = "var(--glass-bg-hover)";
+                    e.currentTarget.style.borderColor = "var(--glass-border-hover)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--glass-bg)";
+                  e.currentTarget.style.borderColor = "var(--glass-border)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                }}
+              >
+                {Icon ? <Icon className="h-3 w-3" /> : <span>{action.emoji}</span>}
+                {action.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 sm:space-y-4 sm:px-4 sm:py-4">
+        <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 scrollbar-thin sm:space-y-4 sm:px-4 sm:py-4">
           {timeline.length === 0 && (
-            <div className="flex gap-3">
-              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400">
+            <div className="flex gap-3 animate-fade-in">
+              <div
+                className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "var(--accent-bg)", color: "var(--accent-light)" }}
+              >
                 <Bot className="h-4 w-4" />
               </div>
-              <div className="max-w-[90%] rounded-xl bg-gray-800 px-3 py-2.5 text-sm leading-relaxed text-gray-200 sm:max-w-[80%] sm:px-4">
+              <div
+                className="max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%]"
+                style={{
+                  background: "var(--glass-bg-strong)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-secondary)",
+                }}
+              >
                 Welcome! Ask me about your email, calendar, or request a briefing.
               </div>
             </div>
@@ -480,11 +562,12 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
             >
               {message.role !== "user" && (
                 <div
-                  className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg sm:h-7 sm:w-7 ${
+                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
+                  style={
                     message.role === "assistant"
-                      ? "bg-blue-600/20 text-blue-400"
-                      : "bg-gray-800 text-gray-500"
-                  }`}
+                      ? { background: "var(--accent-bg)", color: "var(--accent-light)" }
+                      : { background: "var(--glass-bg)", color: "var(--text-ghost)" }
+                  }
                 >
                   {message.role === "assistant" ? (
                     <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -495,34 +578,50 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               )}
 
               <div
-                className={`max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed sm:max-w-[80%] sm:px-4 sm:py-2.5 ${
-                  message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : message.role === "system"
-                    ? "bg-gray-800/50 text-xs italic text-gray-400"
-                    : "bg-gray-800 text-gray-200"
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[80%] sm:px-4 sm:py-3 ${
+                  message.role === "system" ? "text-xs italic" : ""
                 }`}
+                style={
+                  message.role === "user"
+                    ? {
+                        background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                        color: "white",
+                        boxShadow: "0 2px 8px var(--accent-glow)",
+                      }
+                    : message.role === "system"
+                    ? { background: "var(--glass-bg)", color: "var(--text-ghost)" }
+                    : {
+                        background: "var(--glass-bg-strong)",
+                        border: "1px solid var(--glass-border)",
+                        color: "var(--text-secondary)",
+                      }
+                }
               >
                 {message.role === "assistant" ? (
                   <div className={assistantMarkdownClassName}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {message.content}
                     </ReactMarkdown>
-                    {message.id.startsWith("job-status-") && (() => {
-                      const jobId = message.id.replace("job-status-", "");
-                      const job = jobs?.find((j) => j._id === jobId);
-                      if (job?.status !== "failed") return null;
-                      return (
-                        <button
-                          onClick={() => void handleRetry(jobId)}
-                          disabled={isSubmitting}
-                          className="mt-2 flex items-center gap-1.5 rounded-lg bg-red-600/20 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-600/40 disabled:opacity-50"
-                        >
-                          <RotateCcw className="h-3 w-3" />
-                          Retry
-                        </button>
-                      );
-                    })()}
+                    {message.id.startsWith("job-status-") &&
+                      (() => {
+                        const jobId = message.id.replace("job-status-", "");
+                        const job = jobs?.find((j) => j._id === jobId);
+                        if (job?.status !== "failed") return null;
+                        return (
+                          <button
+                            onClick={() => void handleRetry(jobId)}
+                            disabled={isSubmitting}
+                            className="mt-2 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-50"
+                            style={{
+                              background: "var(--error-bg)",
+                              color: "var(--error)",
+                            }}
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Retry
+                          </button>
+                        );
+                      })()}
                   </div>
                 ) : (
                   <div className="whitespace-pre-wrap">{message.content}</div>
@@ -530,8 +629,11 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               </div>
 
               {message.role === "user" && (
-                <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-gray-700 sm:h-7 sm:w-7">
-                  <User className="h-3.5 w-3.5 text-gray-300 sm:h-4 sm:w-4" />
+                <div
+                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
+                  style={{ background: "var(--glass-bg-strong)", color: "var(--text-secondary)" }}
+                >
+                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
               )}
             </div>
@@ -539,11 +641,21 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
           {(isSubmitting || activeJob) && (
             <div className="flex gap-2 sm:gap-3">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/20 sm:h-7 sm:w-7">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400 sm:h-4 sm:w-4" />
+              <div
+                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
+                style={{ background: "var(--accent-bg)" }}
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" style={{ color: "var(--accent-light)" }} />
               </div>
-              <div className="animate-pulse rounded-xl bg-gray-800 px-3 py-2 text-sm text-gray-300 sm:px-4 sm:py-2.5">
-                <span className="font-medium text-gray-200">
+              <div
+                className="animate-pulse rounded-2xl px-4 py-3 text-sm"
+                style={{
+                  background: "var(--glass-bg-strong)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <span className="font-medium" style={{ color: "var(--text-primary)" }}>
                   {isSubmitting
                     ? "Processing..."
                     : activeJob?.status === "running"
@@ -551,10 +663,12 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
                     : "Processing..."}
                 </span>
                 {typeof activeJob?.progress === "number" && (
-                  <span className="ml-1 text-gray-400">({activeJob.progress}%)</span>
+                  <span className="ml-1" style={{ color: "var(--text-tertiary)" }}>
+                    ({activeJob.progress}%)
+                  </span>
                 )}
                 {activeJob?.progressMessage && (
-                  <span className="ml-1 text-gray-500">
+                  <span className="ml-1" style={{ color: "var(--text-ghost)" }}>
                     - {activeJob.progressMessage}
                   </span>
                 )}
@@ -563,55 +677,107 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           )}
 
           {/* Pending approval cards */}
-          {pendingApprovals && pendingApprovals.length > 0 && pendingApprovals.map((approval: any) => (
-            <div key={approval._id} className="flex gap-2 sm:gap-3">
-              <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-amber-600/20 text-amber-400 sm:h-7 sm:w-7">
-                <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </div>
-              <div className="max-w-[85%] rounded-xl border border-amber-600/30 bg-amber-950/30 px-3 py-3 sm:max-w-[80%] sm:px-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-amber-400">
-                  Approval Required
-                </p>
-                <p className="mt-1 text-sm text-gray-200">
-                  {approval.description}
-                </p>
-                {approval.details && (
-                  <div className="mt-2 rounded-lg bg-gray-800/50 p-2 text-xs text-gray-400">
-                    {approval.details.to && <p><span className="text-gray-300">To:</span> {approval.details.to}</p>}
-                    {approval.details.subject && <p><span className="text-gray-300">Subject:</span> {approval.details.subject}</p>}
-                    {approval.details.body && <p className="mt-1 line-clamp-3">{typeof approval.details.body === 'string' ? approval.details.body : approval.details.body?.content?.substring(0, 200)}</p>}
+          {pendingApprovals &&
+            pendingApprovals.length > 0 &&
+            pendingApprovals.map((approval: any) => (
+              <div key={approval._id} className="flex gap-2 sm:gap-3">
+                <div
+                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
+                  style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </div>
+                <div
+                  className="max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[80%]"
+                  style={{
+                    background: "rgba(251, 191, 36, 0.04)",
+                    border: "1px solid rgba(251, 191, 36, 0.15)",
+                  }}
+                >
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-widest"
+                    style={{ color: "var(--warning)" }}
+                  >
+                    Approval Required
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+                    {approval.description}
+                  </p>
+                  {approval.details && (
+                    <div
+                      className="mt-2 rounded-xl p-2.5 text-xs"
+                      style={{
+                        background: "var(--glass-bg)",
+                        color: "var(--text-tertiary)",
+                      }}
+                    >
+                      {approval.details.to && (
+                        <p>
+                          <span style={{ color: "var(--text-secondary)" }}>To:</span>{" "}
+                          {approval.details.to}
+                        </p>
+                      )}
+                      {approval.details.subject && (
+                        <p>
+                          <span style={{ color: "var(--text-secondary)" }}>Subject:</span>{" "}
+                          {approval.details.subject}
+                        </p>
+                      )}
+                      {approval.details.body && (
+                        <p className="mt-1 line-clamp-3">
+                          {typeof approval.details.body === "string"
+                            ? approval.details.body
+                            : approval.details.body?.content?.substring(0, 200)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await approveAction({ approvalId: approval._id });
+                        } catch (err) {
+                          console.error("Approve failed:", err);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200"
+                      style={{
+                        background: "var(--success)",
+                        boxShadow: "0 2px 8px rgba(52, 211, 153, 0.2)",
+                      }}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await rejectAction({ approvalId: approval._id });
+                        } catch (err) {
+                          console.error("Reject failed:", err);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200"
+                      style={{
+                        background: "var(--error)",
+                        boxShadow: "0 2px 8px rgba(251, 113, 133, 0.2)",
+                      }}
+                    >
+                      <ShieldX className="h-3.5 w-3.5" />
+                      Reject
+                    </button>
                   </div>
-                )}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={async () => {
-                      try { await approveAction({ approvalId: approval._id }); } catch (err) { console.error("Approve failed:", err); }
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try { await rejectAction({ approvalId: approval._id }); } catch (err) { console.error("Reject failed:", err); }
-                    }}
-                    className="flex items-center gap-1.5 rounded-lg bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
-                  >
-                    <ShieldX className="h-3.5 w-3.5" />
-                    Reject
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           <div ref={messagesEndRef} />
         </div>
 
         {/* Input area */}
-        <div className="border-t border-gray-800 px-3 py-2 sm:px-4 sm:py-3">
-          <div className="mx-auto flex max-w-3xl gap-2">
+        <div className="px-3 py-3 sm:px-4 sm:py-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+          <div className="mx-auto flex max-w-3xl gap-2.5">
             <input
               ref={inputRef}
               type="text"
@@ -624,13 +790,39 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               }}
               placeholder="Ask about emails, calendar, or request a briefing..."
               disabled={isSubmitting}
-              className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50 sm:px-4 sm:py-2.5"
+              className="focus-ring flex-1 rounded-2xl px-4 py-2.5 text-sm transition-all duration-200 disabled:opacity-40 sm:py-3"
+              style={{
+                background: "var(--glass-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-primary)",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "var(--accent)";
+                e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "var(--glass-border)";
+                e.currentTarget.style.boxShadow = "";
+              }}
             />
-
             <button
               onClick={() => void handleSend()}
               disabled={isSubmitting || !input.trim()}
-              className="rounded-lg bg-blue-600 p-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 sm:p-2.5"
+              className="rounded-2xl p-2.5 text-white transition-all duration-200 disabled:opacity-30 sm:p-3"
+              style={{
+                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                boxShadow: "0 2px 8px var(--accent-glow)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting && input.trim()) {
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(99, 102, 241, 0.3)";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "0 2px 8px var(--accent-glow)";
+                e.currentTarget.style.transform = "";
+              }}
             >
               <Send className="h-4 w-4" />
             </button>

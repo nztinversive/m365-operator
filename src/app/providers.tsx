@@ -155,7 +155,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   if (isPopup) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--bg-base)", color: "var(--text-tertiary)" }}>
         <div className="animate-pulse">Completing sign-in...</div>
       </div>
     );
@@ -163,11 +163,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   if (!convexUrl) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 px-6 text-center text-gray-200">
-        <div>
-          <p className="text-lg font-semibold">Missing Convex configuration</p>
-          <p className="mt-2 text-sm text-gray-400">
-            Set <code className="rounded bg-gray-900 px-1 py-0.5">NEXT_PUBLIC_CONVEX_URL</code> before starting the app.
+      <div className="gradient-mesh flex min-h-screen items-center justify-center px-6 text-center">
+        <div className="animate-scale-in">
+          <p className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Missing Convex configuration</p>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-tertiary)" }}>
+            Set <code className="rounded-lg px-1.5 py-0.5" style={{ background: "var(--glass-bg-strong)", color: "var(--text-secondary)" }}>NEXT_PUBLIC_CONVEX_URL</code> before starting the app.
           </p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   if (!msalReady || !convexClient) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950 text-gray-400">
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--bg-base)", color: "var(--text-tertiary)" }}>
         <div className="animate-pulse">Loading...</div>
       </div>
     );

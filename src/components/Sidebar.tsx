@@ -57,9 +57,7 @@ export function Sidebar({
   }, [pathname]);
 
   const isActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
-    }
+    if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
 
@@ -73,16 +71,33 @@ export function Sidebar({
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center rounded-xl px-3 py-2.5 text-sm transition-colors ${
+            className={`group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
               active
-                ? "bg-gray-800 text-white"
-                : "text-gray-300 hover:bg-gray-800/50 hover:text-white"
+                ? "text-[var(--accent-light)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             }`}
+            style={
+              active
+                ? { background: "var(--accent-bg)", boxShadow: "0 0 12px var(--accent-glow)" }
+                : undefined
+            }
+            onMouseEnter={(e) => {
+              if (!active) e.currentTarget.style.background = "var(--glass-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              if (!active) e.currentTarget.style.background = "";
+            }}
           >
-            <Icon className="mr-3 h-4 w-4" />
+            <Icon
+              className={`mr-3 h-[18px] w-[18px] transition-colors duration-200 ${
+                active
+                  ? "text-[var(--accent-light)]"
+                  : "text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]"
+              }`}
+            />
             <span className="flex-1">{item.label}</span>
             {item.badge !== undefined && (
-              <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+              <span className="rounded-full bg-[var(--error)] px-2 py-0.5 text-[10px] font-semibold text-white">
                 {item.badge}
               </span>
             )}
@@ -96,22 +111,42 @@ export function Sidebar({
 
   return (
     <>
-      <header className="border-b border-gray-800 bg-gray-900/90 px-4 py-3 backdrop-blur lg:hidden">
+      {/* Mobile header */}
+      <header
+        className="border-b px-4 py-3 lg:hidden"
+        style={{
+          background: "rgba(10, 11, 16, 0.85)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderColor: "var(--glass-border)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white"
+              style={{
+                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                boxShadow: "0 4px 12px var(--accent-glow)",
+              }}
+            >
               M
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">M365 Operator</p>
-              <p className="text-xs text-gray-400">{firstName}</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                M365 Operator
+              </p>
+              <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                {firstName}
+              </p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => setMobileOpen((current) => !current)}
-            className="rounded-lg p-2 text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+            className="rounded-xl p-2 transition-all duration-200"
+            style={{ color: "var(--text-secondary)" }}
             aria-label="Toggle menu"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -119,42 +154,96 @@ export function Sidebar({
         </div>
       </header>
 
+      {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="border-b border-gray-800 bg-gray-900 px-4 py-4 lg:hidden">
+        <div
+          className="animate-slide-up border-b px-4 py-4 lg:hidden"
+          style={{ background: "var(--bg-surface)", borderColor: "var(--glass-border)" }}
+        >
           {renderNavigation()}
-          <div className="mt-4 border-t border-gray-800 pt-4">
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm text-gray-300 transition-colors hover:bg-gray-800/50 hover:text-white"
+              className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm transition-all duration-200"
+              style={{ color: "var(--text-secondary)" }}
             >
-              <LogOut className="mr-3 h-4 w-4" />
+              <LogOut className="mr-3 h-[18px] w-[18px]" />
               Sign out
             </button>
           </div>
         </div>
       )}
 
-      <aside className="fixed inset-y-0 hidden w-72 border-r border-gray-800 bg-gray-900 px-4 py-6 lg:flex lg:flex-col">
-        <div className="mb-6 flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white">
+      {/* Desktop sidebar */}
+      <aside
+        className="fixed inset-y-0 hidden w-72 flex-col px-4 py-6 lg:flex"
+        style={{
+          background: "rgba(18, 19, 26, 0.6)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderRight: "1px solid var(--glass-border)",
+        }}
+      >
+        {/* Logo */}
+        <div className="mb-8 flex items-center gap-3 px-2">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white"
+            style={{
+              background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+              boxShadow: "0 4px 16px var(--accent-glow)",
+            }}
+          >
             M
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">M365 Operator</p>
-            <p className="text-xs text-gray-400">Microsoft 365 Copilot</p>
+            <p
+              className="text-[15px] font-semibold tracking-tight"
+              style={{ color: "var(--text-primary)" }}
+            >
+              M365 Operator
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+              AI Workspace Assistant
+            </p>
           </div>
         </div>
 
+        {/* Nav */}
         <div className="flex-1">{renderNavigation()}</div>
 
-        <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-3">
-          <p className="truncate text-sm font-medium text-white">{firstName}</p>
-          <p className="truncate text-xs text-gray-400">{account.username}</p>
+        {/* User card */}
+        <div
+          className="rounded-2xl p-3"
+          style={{
+            background: "var(--glass-bg)",
+            border: "1px solid var(--glass-border)",
+          }}
+        >
+          <p className="truncate text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+            {firstName}
+          </p>
+          <p className="truncate text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+            {account.username}
+          </p>
           <button
             type="button"
             onClick={onLogout}
-            className="mt-3 flex w-full items-center justify-center rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300 transition-colors hover:border-gray-600 hover:text-white"
+            className="mt-3 flex w-full items-center justify-center rounded-xl px-3 py-2 text-sm transition-all duration-200"
+            style={{
+              color: "var(--text-secondary)",
+              border: "1px solid var(--glass-border)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--glass-border-hover)";
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.background = "var(--glass-bg)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--glass-border)";
+              e.currentTarget.style.color = "var(--text-secondary)";
+              e.currentTarget.style.background = "";
+            }}
           >
             <LogOut className="mr-2 h-4 w-4" />
             Sign out
