@@ -167,7 +167,7 @@ export class JobProcessor {
       await this.executeJob(job);
     } catch (error) {
       console.error(`❌ Job ${job._id} error:`, error);
-      await this.updateJobStatus(job._id, 'failed', undefined, error instanceof Error ? error.message : 'Unknown error');
+      await this.updateJobStatus(job._id, 'failed', undefined, this.toFriendlyError(error));
       this.activeJobs.delete(job._id);
     }
   }
@@ -380,7 +380,8 @@ export class JobProcessor {
       });
     } catch (error) {
       console.error(`❌ Job ${job._id} failed:`, error);
-      await this.updateJobStatus(job._id, 'failed', undefined, error instanceof Error ? error.message : 'Unknown');
+      const friendlyError = this.toFriendlyError(error);
+      await this.updateJobStatus(job._id, 'failed', undefined, friendlyError);
       await this.audit(job.userId, 'job_failed', job._id, {
         error: error instanceof Error ? error.message.substring(0, 200) : 'Unknown',
       });
@@ -390,6 +391,34 @@ export class JobProcessor {
       if (exec?.heartbeatHandle) clearInterval(exec.heartbeatHandle);
       this.activeJobs.delete(job._id);
     }
+  }
+
+  // ─── Map raw errors to user-friendly messages ─────────────────────
+  private toFriendlyError(error: unknown): string {
+    const raw = error instanceof Error ? error.message : String(error);
+    const lower = raw.toLowerCase();
+
+    // Token / auth errors
+    if (['401', 'unauthorized', 'no refresh token', 'token expired', 'invalid_grant'].some(k => lower.includes(k))) {
+      return 'Your Microsoft session has expired. Please sign out and back in to reconnect.';
+    }
+
+    // AI service quota / rate-limit errors
+    if (['credit balance', 'insufficient_quota', 'rate_limit', 'rate limit'].some(k => lower.includes(k))) {
+      return 'The AI service is temporarily unavailable. Please try again in a moment.';
+    }
+
+    // Graph permission errors
+    if (['403', 'forbidden', 'insufficient privileges', 'access denied'].some(k => lower.includes(k))) {
+      return 'Missing permission for this action. Please sign out and back in to grant additional access.';
+    }
+
+    // Timeout errors
+    if (['timeout', 'timed out', 'etimedout', 'econnaborted'].some(k => lower.includes(k))) {
+      return 'This request took too long. Try simplifying your request.';
+    }
+
+    return raw;
   }
 
   // ─── Resume from approval: skip agent loop, execute approved actions directly ──
