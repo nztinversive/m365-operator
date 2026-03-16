@@ -6,7 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { AccountInfo } from "@azure/msal-browser";
 import { Navigation } from "./Navigation";
 import { ChatView } from "./ChatView";
-import { JobHistory } from "./JobHistory";
+import { JobHistoryPage as JobHistory } from "./JobHistoryPage";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { DocumentsPage } from "./DocumentsPage";
 import { SettingsPage } from "./SettingsPage";
