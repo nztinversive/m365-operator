@@ -94,7 +94,23 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
     user,
   ]);
 
-  if (!isAuthenticated || !account) {
+  // Wait for MSAL to fully initialize before showing login screen.
+  // useIsAuthenticated can briefly return false during init even with cached accounts.
+  const allAccounts = instance.getAllAccounts();
+  if (!isAuthenticated && allAccounts.length === 0 && !account) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // Still initializing — MSAL has accounts but hasn't set active yet
+  if (!account && allAccounts.length > 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-b-transparent" />
+      </div>
+    );
+  }
+
+  if (!account) {
     return <LoginScreen onLogin={handleLogin} />;
   }
 

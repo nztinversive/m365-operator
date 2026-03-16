@@ -125,6 +125,14 @@ export function Providers({ children }: { children: ReactNode }) {
           return;
         }
 
+        // Always try to restore active account from cache
+        const active = pca.getActiveAccount();
+        if (active) {
+          // Already set, just sync
+          void syncAccountToConvex(active, null);
+          return;
+        }
+
         const accounts = pca.getAllAccounts();
         if (accounts.length > 0) {
           pca.setActiveAccount(accounts[0]);
