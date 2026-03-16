@@ -42,7 +42,7 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
   const approvals = useQuery(api.approvals.listPending, { userId });
   const approveAction = useMutation(api.approvals.approve);
   const rejectAction = useMutation(api.approvals.reject);
-  
+
   const [expandedApproval, setExpandedApproval] = useState<string | null>(null);
   const [processingApproval, setProcessingApproval] = useState<string | null>(null);
 
@@ -91,12 +91,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     if (diffMinutes < 60) {
       return `${Math.floor(diffMinutes)} minutes ago`;
     }
-    
+
     const diffHours = diffMinutes / 60;
     if (diffHours < 24) {
       return `${Math.floor(diffHours)} hours ago`;
     }
-    
+
     const diffDays = diffHours / 24;
     return `${Math.floor(diffDays)} days ago`;
   };
@@ -108,9 +108,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
     if (approval.action === "send_email") {
       return (
-        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-          <h4 className="font-medium text-sm text-gray-900 mb-2">Email Preview</h4>
-          <div className="space-y-2 text-xs">
+        <div
+          className="mt-3 p-3 rounded-xl"
+          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+        >
+          <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Email Preview</h4>
+          <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
             <div><strong>To:</strong> {getString(details, "to") || "Unknown recipient"}</div>
             {getStringArray(details, "cc")?.length ? (
               <div><strong>CC:</strong> {getStringArray(details, "cc")!.join(", ")}</div>
@@ -118,10 +121,11 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               <div><strong>CC:</strong> {getString(details, "cc")}</div>
             ) : null}
             <div><strong>Subject:</strong> {getString(details, "subject") || "No subject"}</div>
-            <div className="border-t pt-2 mt-2">
+            <div style={{ borderTop: "1px solid var(--glass-border)" }} className="pt-2 mt-2">
               <strong>Body:</strong>
-              <div 
-                className="mt-1 text-gray-700 max-h-32 overflow-y-auto"
+              <div
+                className="mt-1 max-h-32 overflow-y-auto scrollbar-thin"
+                style={{ color: "var(--text-secondary)" }}
                 dangerouslySetInnerHTML={{
                   __html: getString(details, "body") || getString(details, "bodyPreview") || "",
                 }}
@@ -134,14 +138,17 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
     if (approval.action === "post_teams") {
       return (
-        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-          <h4 className="font-medium text-sm text-gray-900 mb-2">Teams Message Preview</h4>
-          <div className="space-y-2 text-xs">
+        <div
+          className="mt-3 p-3 rounded-xl"
+          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+        >
+          <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Teams Message Preview</h4>
+          <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
             <div><strong>Channel:</strong> {getString(details, "channelName") || getString(details, "channel") || "Unknown channel"}</div>
             {getString(details, "subject") && <div><strong>Subject:</strong> {getString(details, "subject")}</div>}
-            <div className="border-t pt-2 mt-2">
+            <div style={{ borderTop: "1px solid var(--glass-border)" }} className="pt-2 mt-2">
               <strong>Message:</strong>
-              <div className="mt-1 text-gray-700 max-h-32 overflow-y-auto">
+              <div className="mt-1 max-h-32 overflow-y-auto scrollbar-thin" style={{ color: "var(--text-secondary)" }}>
                 {getString(details, "message") || getString(details, "content")}
               </div>
             </div>
@@ -152,9 +159,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
     if (approval.action === "create_calendar_event") {
       return (
-        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-          <h4 className="font-medium text-sm text-gray-900 mb-2">Calendar Event Preview</h4>
-          <div className="space-y-2 text-xs">
+        <div
+          className="mt-3 p-3 rounded-xl"
+          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+        >
+          <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Calendar Event Preview</h4>
+          <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
             <div><strong>Title:</strong> {getString(details, "subject") || getString(details, "title") || "Untitled event"}</div>
             <div><strong>Start:</strong> {new Date(getString(details, "start") || "").toLocaleString()}</div>
             <div><strong>End:</strong> {new Date(getString(details, "end") || "").toLocaleString()}</div>
@@ -169,15 +179,18 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
     if (approval.action === "overwrite_file") {
       return (
-        <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-          <h4 className="font-medium text-sm text-gray-900 mb-2 flex items-center">
-            <AlertTriangle className="w-4 h-4 text-yellow-500 mr-1" />
+        <div
+          className="mt-3 p-3 rounded-xl"
+          style={{ background: "rgba(251, 191, 36, 0.06)", border: "1px solid rgba(251, 191, 36, 0.15)" }}
+        >
+          <h4 className="font-medium text-sm mb-2 flex items-center" style={{ color: "var(--text-primary)" }}>
+            <AlertTriangle className="w-4 h-4 mr-1" style={{ color: "var(--warning)" }} />
             File Overwrite Warning
           </h4>
-          <div className="space-y-2 text-xs">
+          <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
             <div><strong>File:</strong> {getString(details, "fileName") || getString(details, "name") || "Unknown file"}</div>
             <div><strong>Location:</strong> {getString(details, "location") || getString(details, "path") || "Unknown path"}</div>
-            <div className="text-yellow-700 text-xs mt-2">
+            <div className="text-xs mt-2" style={{ color: "var(--warning)" }}>
               This action will replace the existing file. This cannot be undone.
             </div>
           </div>
@@ -187,9 +200,15 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
     // Generic details display
     return (
-      <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-        <h4 className="font-medium text-sm text-gray-900 mb-2">Details</h4>
-        <pre className="text-xs text-gray-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
+      <div
+        className="mt-3 p-3 rounded-xl"
+        style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+      >
+        <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Details</h4>
+        <pre
+          className="text-xs whitespace-pre-wrap max-h-32 overflow-y-auto scrollbar-thin"
+          style={{ color: "var(--text-secondary)" }}
+        >
           {JSON.stringify(details, null, 2)}
         </pre>
       </div>
@@ -199,18 +218,21 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
   if (!approvals) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Clock className="w-6 h-6 text-gray-400 animate-pulse mr-2" />
-        <span className="text-gray-600">Loading approvals...</span>
+        <Clock className="w-6 h-6 animate-pulse mr-2" style={{ color: "var(--text-ghost)" }} />
+        <span style={{ color: "var(--text-secondary)" }}>Loading approvals...</span>
       </div>
     );
   }
 
   if (approvals.length === 0) {
     return (
-      <div className="text-center p-8">
-        <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">All caught up!</h3>
-        <p className="text-gray-500">
+      <div
+        className="text-center rounded-2xl p-8"
+        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+      >
+        <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--success)" }} />
+        <h3 className="text-lg font-medium mb-2" style={{ color: "var(--text-primary)" }}>All caught up!</h3>
+        <p style={{ color: "var(--text-ghost)" }}>
           No pending approvals at the moment.
         </p>
       </div>
@@ -218,10 +240,13 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="animate-fade-in space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Approval Queue</h2>
-        <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Approval Queue</h2>
+        <span
+          className="text-xs font-medium px-2.5 py-1 rounded-full"
+          style={{ background: "var(--error-bg)", color: "var(--error)" }}
+        >
           {approvals.length} pending
         </span>
       </div>
@@ -232,29 +257,39 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
           return (
           <div
             key={pendingApproval._id}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            className="animate-slide-up rounded-2xl p-5 transition-all duration-200"
+            style={{
+              background: "rgba(251, 191, 36, 0.03)",
+              border: "1px solid rgba(251, 191, 36, 0.15)",
+            }}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-3 flex-1">
-                <div className="flex-shrink-0 mt-0.5 p-2 bg-yellow-100 rounded-lg">
+                <div
+                  className="flex-shrink-0 mt-0.5 p-2 rounded-lg"
+                  style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+                >
                   {getActionIcon(pendingApproval.action)}
                 </div>
-                
+
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-2 mb-1">
-                    <h3 className="text-sm font-medium text-gray-900">
+                    <h3 className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                       {formatActionType(pendingApproval.action)}
                     </h3>
-                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+                    >
                       Approval Required
                     </span>
                   </div>
 
-                  <p className="text-sm text-gray-600 mb-2">
+                  <p className="text-sm mb-2" style={{ color: "var(--text-secondary)" }}>
                     {pendingApproval.description}
                   </p>
 
-                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                  <div className="flex items-center space-x-4 text-xs" style={{ color: "var(--text-ghost)" }}>
                     <span>Requested {formatDateTime(pendingApproval.createdAt)}</span>
                   </div>
                 </div>
@@ -266,7 +301,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
                     onClick={() => setExpandedApproval(
                       expandedApproval === pendingApproval._id ? null : pendingApproval._id
                     )}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="p-1 transition-colors"
+                    style={{ color: "var(--text-ghost)" }}
                     title="View details"
                   >
                     {expandedApproval === pendingApproval._id ? (
@@ -281,20 +317,25 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
             {expandedApproval === pendingApproval._id && renderApprovalDetails(pendingApproval)}
 
-            <div className="flex items-center justify-end space-x-2 mt-4 pt-3 border-t">
+            <div
+              className="flex items-center justify-end space-x-2 mt-4 pt-3"
+              style={{ borderTop: "1px solid var(--glass-border)" }}
+            >
               <button
                 onClick={() => handleReject(pendingApproval._id)}
                 disabled={processingApproval === pendingApproval._id}
-                className="flex items-center space-x-1 px-3 py-1.5 text-sm text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center space-x-1 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50"
+                style={{ background: "var(--error)", boxShadow: "0 2px 8px rgba(251, 113, 133, 0.2)" }}
               >
                 <XCircle className="w-4 h-4" />
                 <span>Reject</span>
               </button>
-              
+
               <button
                 onClick={() => handleApprove(pendingApproval._id)}
                 disabled={processingApproval === pendingApproval._id}
-                className="flex items-center space-x-1 px-3 py-1.5 text-sm text-green-700 bg-green-100 hover:bg-green-200 rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center space-x-1 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50"
+                style={{ background: "var(--success)", boxShadow: "0 2px 8px rgba(52, 211, 153, 0.2)" }}
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Approve</span>

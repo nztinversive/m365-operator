@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  MessageSquare, 
-  Clock, 
-  CheckCircle, 
-  FileText, 
+import {
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  FileText,
   Settings,
   Menu,
   X,
-  LogOut 
+  LogOut
 } from "lucide-react";
 import { AccountInfo } from "@azure/msal-browser";
 
@@ -21,10 +21,10 @@ interface NavigationProps {
   pendingApprovalsCount?: number;
 }
 
-export function Navigation({ 
-  currentView, 
-  onViewChange, 
-  account, 
+export function Navigation({
+  currentView,
+  onViewChange,
+  account,
   onLogout,
   pendingApprovalsCount = 0
 }: NavigationProps) {
@@ -72,37 +72,53 @@ export function Navigation({
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-gray-900 lg:border-r lg:border-gray-800">
+      <div
+        className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0"
+        style={{
+          background: "var(--surface-overlay)",
+          borderRight: "1px solid var(--glass-border)",
+        }}
+      >
         {/* Logo/Header */}
-        <div className="flex items-center px-6 py-4 border-b border-gray-800">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+        <div
+          className="flex items-center px-6 py-4"
+          style={{ borderBottom: "1px solid var(--glass-border)" }}
+        >
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "var(--accent)" }}
+          >
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div className="ml-3">
-            <h1 className="text-white font-semibold">M365 Operator</h1>
+            <h1 className="font-semibold" style={{ color: "var(--text-primary)" }}>M365 Operator</h1>
           </div>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 px-4 py-4 space-y-2">
+        <nav className="flex-1 px-4 py-4 space-y-1">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
-            
+
             return (
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                }`}
+                className="w-full flex items-center px-3 py-2.5 text-sm rounded-xl transition-all duration-200"
+                style={{
+                  background: isActive ? "var(--glass-bg-strong)" : "transparent",
+                  color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                  border: isActive ? "1px solid var(--glass-border)" : "1px solid transparent",
+                }}
               >
                 <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge && (
-                  <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] text-center">
+                  <span
+                    className="ml-2 text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] text-center font-semibold"
+                    style={{ background: "var(--error)", color: "white" }}
+                  >
                     {item.badge}
                   </span>
                 )}
@@ -112,26 +128,30 @@ export function Navigation({
         </nav>
 
         {/* User Info */}
-        <div className="border-t border-gray-800 p-4">
+        <div className="p-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center min-w-0">
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-medium">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+              >
+                <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
                   {account.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="ml-3 min-w-0">
-                <p className="text-sm text-white truncate">
+                <p className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
                   {account.name?.split(" ")[0] || "User"}
                 </p>
-                <p className="text-xs text-gray-400 truncate">
+                <p className="text-xs truncate" style={{ color: "var(--text-ghost)" }}>
                   {account.username}
                 </p>
               </div>
             </div>
             <button
               onClick={onLogout}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 transition-colors rounded-lg"
+              style={{ color: "var(--text-ghost)" }}
               title="Sign out"
             >
               <LogOut className="w-4 h-4" />
@@ -141,32 +161,46 @@ export function Navigation({
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden bg-gray-900 border-b border-gray-800 px-4 py-3">
+      <div
+        className="lg:hidden px-4 py-3"
+        style={{
+          background: "var(--surface-overlay)",
+          borderBottom: "1px solid var(--glass-border)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "var(--accent)" }}
+            >
               <span className="text-sm font-bold text-white">M</span>
             </div>
-            <h1 className="ml-3 text-white font-semibold">M365 Operator</h1>
+            <h1 className="ml-3 font-semibold" style={{ color: "var(--text-primary)" }}>M365 Operator</h1>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Pending approvals indicator */}
             {pendingApprovalsCount > 0 && (
               <button
                 onClick={() => handleItemClick("approvals")}
-                className="relative p-2 text-gray-300 hover:text-white"
+                className="relative p-2"
+                style={{ color: "var(--text-secondary)" }}
               >
                 <CheckCircle className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
+                <span
+                  className="absolute -top-1 -right-1 text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-semibold"
+                  style={{ background: "var(--error)", color: "white" }}
+                >
                   {pendingApprovalsCount}
                 </span>
               </button>
             )}
-            
+
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-gray-300 hover:text-white"
+              className="p-2"
+              style={{ color: "var(--text-secondary)" }}
             >
               {isMobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -180,54 +214,68 @@ export function Navigation({
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden bg-gray-900 border-b border-gray-800">
+        <div
+          className="lg:hidden"
+          style={{
+            background: "var(--surface-overlay)",
+            borderBottom: "1px solid var(--glass-border)",
+          }}
+        >
           <nav className="px-4 py-2 space-y-1">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
-              
+
               return (
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-gray-800 text-white"
-                      : "text-gray-300 hover:text-white hover:bg-gray-800/50"
-                  }`}
+                  className="w-full flex items-center px-3 py-2.5 text-sm rounded-xl transition-all duration-200"
+                  style={{
+                    background: isActive ? "var(--glass-bg-strong)" : "transparent",
+                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                    border: isActive ? "1px solid var(--glass-border)" : "1px solid transparent",
+                  }}
                 >
                   <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
                   <span className="flex-1 text-left">{item.label}</span>
                   {item.badge && (
-                    <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                    <span
+                      className="ml-2 text-xs rounded-full px-2 py-0.5 font-semibold"
+                      style={{ background: "var(--error)", color: "white" }}
+                    >
                       {item.badge}
                     </span>
                   )}
                 </button>
               );
             })}
-            
+
             {/* User section in mobile */}
-            <div className="border-t border-gray-800 pt-2 mt-2">
+            <div className="pt-2 mt-2" style={{ borderTop: "1px solid var(--glass-border)" }}>
               <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-center min-w-0">
-                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white font-medium">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+                  >
+                    <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
                       {account.name?.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="ml-3 min-w-0">
-                    <p className="text-sm text-white truncate">
+                    <p className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
                       {account.name?.split(" ")[0] || "User"}
                     </p>
-                    <p className="text-xs text-gray-400 truncate">
+                    <p className="text-xs truncate" style={{ color: "var(--text-ghost)" }}>
                       {account.username}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onLogout}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                  className="p-2 transition-colors rounded-lg"
+                  style={{ color: "var(--text-ghost)" }}
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />

@@ -76,8 +76,8 @@ export function MainApp({ account, onLogout }: MainAppProps) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-red-600 font-medium">Account setup failed</p>
-            <p className="text-gray-600 mt-2">{userSetupError}</p>
+            <p className="font-medium" style={{ color: "var(--error)" }}>Account setup failed</p>
+            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>{userSetupError}</p>
           </div>
         </div>
       );
@@ -87,8 +87,11 @@ export function MainApp({ account, onLogout }: MainAppProps) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Setting up your account...</p>
+            <div
+              className="animate-spin rounded-full h-8 w-8 border-2 border-b-transparent mx-auto mb-4"
+              style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
+            />
+            <p style={{ color: "var(--text-secondary)" }}>Setting up your account...</p>
           </div>
         </div>
       );
@@ -111,7 +114,7 @@ export function MainApp({ account, onLogout }: MainAppProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen" style={{ background: "var(--bg-base)" }}>
       {/* Navigation Sidebar */}
       <Navigation
         currentView={currentView}
