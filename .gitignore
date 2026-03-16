@@ -45,3 +45,7 @@ worker/dist
 worker/temp
 worker/.env
 worker/.env.local
+
+# convex - ignore compiled output (keep _generated/)
+convex/*.js
+convex/*.d.ts
