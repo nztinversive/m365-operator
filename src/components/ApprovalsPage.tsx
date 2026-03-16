@@ -101,11 +101,11 @@ export function ApprovalsPage({ userId }: ApprovalsPageProps) {
                       </span>
                     </div>
                     <h3 className="mt-2 text-base font-medium text-white">
-                      {formatToolName(approval.toolName)}
+                      {formatToolName(approval.action)}
                     </h3>
-                    {approval.input && (
+                    {approval.details && (
                       <pre className="mt-2 max-h-40 overflow-auto rounded bg-gray-800 p-3 text-xs text-gray-300">
-                        {JSON.stringify(approval.input, null, 2)}
+                        {JSON.stringify(approval.details, null, 2)}
                       </pre>
                     )}
                   </div>
@@ -160,7 +160,7 @@ export function ApprovalsPage({ userId }: ApprovalsPageProps) {
                     {approval.status === "approved" ? "Approved" : "Rejected"}
                   </span>
                   <span className="text-sm text-gray-300">
-                    {formatToolName(approval.toolName)}
+                    {formatToolName(approval.action)}
                   </span>
                 </div>
                 <span className="text-xs text-gray-500">
