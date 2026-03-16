@@ -309,7 +309,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           sidebarOpen ? "lg:w-64" : ""
         }`}
         style={{
-          background: "var(--bg-surface)",
+          background: "var(--surface-overlay)",
           borderRight: "1px solid var(--glass-border)",
         }}
       >
@@ -403,7 +403,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
         <header
           className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3"
           style={{
-            background: "rgba(18, 19, 26, 0.7)",
+            background: "var(--surface-card)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
             borderBottom: "1px solid var(--glass-border)",
@@ -545,7 +545,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               <div
                 className="max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%]"
                 style={{
-                  background: "var(--glass-bg-strong)",
+                  background: "var(--surface-card)",
                   border: "1px solid var(--glass-border)",
                   color: "var(--text-secondary)",
                 }}
@@ -591,7 +591,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
                     : message.role === "system"
                     ? { background: "var(--glass-bg)", color: "var(--text-ghost)" }
                     : {
-                        background: "var(--glass-bg-strong)",
+                        background: "var(--surface-card)",
                         border: "1px solid var(--glass-border)",
                         color: "var(--text-secondary)",
                       }
@@ -650,7 +650,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
               <div
                 className="animate-pulse rounded-2xl px-4 py-3 text-sm"
                 style={{
-                  background: "var(--glass-bg-strong)",
+                  background: "var(--surface-card)",
                   border: "1px solid var(--glass-border)",
                   color: "var(--text-secondary)",
                 }}

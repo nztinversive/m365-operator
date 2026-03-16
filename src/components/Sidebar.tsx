@@ -115,7 +115,7 @@ export function Sidebar({
       <header
         className="border-b px-4 py-3 lg:hidden"
         style={{
-          background: "rgba(10, 11, 16, 0.85)",
+          background: "var(--surface-card)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderColor: "var(--glass-border)",
@@ -179,7 +179,7 @@ export function Sidebar({
       <aside
         className="fixed inset-y-0 hidden w-72 flex-col px-4 py-6 lg:flex"
         style={{
-          background: "rgba(18, 19, 26, 0.6)",
+          background: "var(--surface-card)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderRight: "1px solid var(--glass-border)",
