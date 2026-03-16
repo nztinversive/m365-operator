@@ -285,6 +285,30 @@ export class JobProcessor {
             url: uploadResult.webUrl,
             id: uploadResult.id,
           });
+
+          // Save document record to Convex so the Documents page can display it
+          const typeMap: Record<string, 'docx' | 'xlsx' | 'pptx' | 'pdf'> = {
+            word_document: 'docx',
+            excel_workbook: 'xlsx',
+            powerpoint: 'pptx',
+          };
+          const docType = typeMap[file.type];
+          if (docType) {
+            try {
+              await this.convex.mutation(this.createDocumentRef, {
+                userId: job.userId,
+                jobId: job._id,
+                name: uploadName,
+                type: docType,
+                driveItemId: uploadResult.id,
+                webUrl: uploadResult.webUrl,
+                size: docBuffer.length,
+              });
+              console.log(`  📄 Document record saved: ${uploadName}`);
+            } catch (docErr) {
+              console.error(`  ⚠️ Failed to save document record for ${uploadName}:`, docErr);
+            }
+          }
         } catch (err) {
           console.error(`  ❌ Failed to process file ${file.name}:`, err);
         }
