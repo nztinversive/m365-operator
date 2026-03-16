@@ -19,8 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${plusJakarta.variable} ${plusJakarta.className} antialiased`}
+    <html lang="en">
+      <body
+        className={`${plusJakarta.variable} ${plusJakarta.className} antialiased`}
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
         <Providers>{children}</Providers>

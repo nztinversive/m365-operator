@@ -25,10 +25,9 @@ export function MainApp({ account, onLogout }: MainAppProps) {
   const [userSetupError, setUserSetupError] = useState<string | null>(null);
   const getOrCreateUser = useMutation(api.users.getOrCreate);
 
-  // Get user data
   const user = useQuery(api.users.getByEmail, { email: account.username! });
   const pendingApprovals = useQuery(
-    api.approvals.listPending, 
+    api.approvals.listPending,
     user ? { userId: user._id } : "skip"
   );
   useTokenSync({
@@ -77,7 +76,7 @@ export function MainApp({ account, onLogout }: MainAppProps) {
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <p className="font-medium" style={{ color: "var(--error)" }}>Account setup failed</p>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>{userSetupError}</p>
+            <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>{userSetupError}</p>
           </div>
         </div>
       );
@@ -91,7 +90,7 @@ export function MainApp({ account, onLogout }: MainAppProps) {
               className="animate-spin rounded-full h-8 w-8 border-2 border-b-transparent mx-auto mb-4"
               style={{ borderColor: "var(--accent)", borderBottomColor: "transparent" }}
             />
-            <p style={{ color: "var(--text-secondary)" }}>Setting up your account...</p>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Setting up your account...</p>
           </div>
         </div>
       );
@@ -115,7 +114,6 @@ export function MainApp({ account, onLogout }: MainAppProps) {
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg-base)" }}>
-      {/* Navigation Sidebar */}
       <Navigation
         currentView={currentView}
         onViewChange={setCurrentView}
@@ -124,19 +122,13 @@ export function MainApp({ account, onLogout }: MainAppProps) {
         pendingApprovalsCount={pendingApprovals?.length || 0}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 lg:ml-64">
-        {/* Mobile header is included in Navigation component */}
-        
-        {/* Content */}
+      <div className="flex-1 lg:ml-60">
         <div className="h-full overflow-hidden">
           {currentView === "chat" ? (
-            // Chat view takes full height
             renderCurrentView()
           ) : (
-            // Other views have padding and scrolling
             <div className="h-full overflow-y-auto">
-              <div className="max-w-7xl mx-auto px-4 py-6">
+              <div className="max-w-5xl mx-auto px-6 py-8">
                 {renderCurrentView()}
               </div>
             </div>

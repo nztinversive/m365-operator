@@ -109,8 +109,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     if (approval.action === "send_email") {
       return (
         <div
-          className="mt-3 p-3 rounded-xl"
-          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+          className="mt-3 p-3 rounded-lg"
+          style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}
         >
           <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Email Preview</h4>
           <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
@@ -121,7 +121,7 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               <div><strong>CC:</strong> {getString(details, "cc")}</div>
             ) : null}
             <div><strong>Subject:</strong> {getString(details, "subject") || "No subject"}</div>
-            <div style={{ borderTop: "1px solid var(--glass-border)" }} className="pt-2 mt-2">
+            <div style={{ borderTop: "1px solid var(--border)" }} className="pt-2 mt-2">
               <strong>Body:</strong>
               <div
                 className="mt-1 max-h-32 overflow-y-auto scrollbar-thin"
@@ -139,14 +139,14 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     if (approval.action === "post_teams") {
       return (
         <div
-          className="mt-3 p-3 rounded-xl"
-          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+          className="mt-3 p-3 rounded-lg"
+          style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}
         >
           <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Teams Message Preview</h4>
           <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
             <div><strong>Channel:</strong> {getString(details, "channelName") || getString(details, "channel") || "Unknown channel"}</div>
             {getString(details, "subject") && <div><strong>Subject:</strong> {getString(details, "subject")}</div>}
-            <div style={{ borderTop: "1px solid var(--glass-border)" }} className="pt-2 mt-2">
+            <div style={{ borderTop: "1px solid var(--border)" }} className="pt-2 mt-2">
               <strong>Message:</strong>
               <div className="mt-1 max-h-32 overflow-y-auto scrollbar-thin" style={{ color: "var(--text-secondary)" }}>
                 {getString(details, "message") || getString(details, "content")}
@@ -160,8 +160,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     if (approval.action === "create_calendar_event") {
       return (
         <div
-          className="mt-3 p-3 rounded-xl"
-          style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+          className="mt-3 p-3 rounded-lg"
+          style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}
         >
           <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Calendar Event Preview</h4>
           <div className="space-y-2 text-xs" style={{ color: "var(--text-secondary)" }}>
@@ -180,8 +180,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     if (approval.action === "overwrite_file") {
       return (
         <div
-          className="mt-3 p-3 rounded-xl"
-          style={{ background: "rgba(251, 191, 36, 0.06)", border: "1px solid rgba(251, 191, 36, 0.15)" }}
+          className="mt-3 p-3 rounded-lg"
+          style={{ background: "var(--warning-bg)", border: "1px solid rgba(245, 158, 11, 0.2)" }}
         >
           <h4 className="font-medium text-sm mb-2 flex items-center" style={{ color: "var(--text-primary)" }}>
             <AlertTriangle className="w-4 h-4 mr-1" style={{ color: "var(--warning)" }} />
@@ -201,8 +201,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
     // Generic details display
     return (
       <div
-        className="mt-3 p-3 rounded-xl"
-        style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+        className="mt-3 p-3 rounded-lg"
+        style={{ background: "var(--bg-muted)", border: "1px solid var(--border)" }}
       >
         <h4 className="font-medium text-sm mb-2" style={{ color: "var(--text-primary)" }}>Details</h4>
         <pre
@@ -227,8 +227,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
   if (approvals.length === 0) {
     return (
       <div
-        className="text-center rounded-2xl p-8"
-        style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+        className="text-center rounded-xl p-8"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
       >
         <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--success)" }} />
         <h3 className="text-lg font-medium mb-2" style={{ color: "var(--text-primary)" }}>All caught up!</h3>
@@ -242,7 +242,12 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
   return (
     <div className="animate-fade-in space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Approval Queue</h2>
+        <h2
+          className="text-xl font-semibold"
+          style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
+        >
+          Approval Queue
+        </h2>
         <span
           className="text-xs font-medium px-2.5 py-1 rounded-full"
           style={{ background: "var(--error-bg)", color: "var(--error)" }}
@@ -257,10 +262,11 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
           return (
           <div
             key={pendingApproval._id}
-            className="animate-slide-up rounded-2xl p-5 transition-all duration-200"
+            className="animate-slide-up rounded-xl p-5 transition-all duration-150"
             style={{
-              background: "rgba(251, 191, 36, 0.03)",
-              border: "1px solid rgba(251, 191, 36, 0.15)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow-sm)",
             }}
           >
             <div className="flex items-start justify-between">
@@ -278,7 +284,7 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
                       {formatActionType(pendingApproval.action)}
                     </h3>
                     <span
-                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
                     >
                       Approval Required
@@ -301,9 +307,11 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
                     onClick={() => setExpandedApproval(
                       expandedApproval === pendingApproval._id ? null : pendingApproval._id
                     )}
-                    className="p-1 transition-colors"
+                    className="p-1 transition-colors rounded-md"
                     style={{ color: "var(--text-ghost)" }}
                     title="View details"
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-ghost)"; }}
                   >
                     {expandedApproval === pendingApproval._id ? (
                       <ChevronUp className="w-4 h-4" />
@@ -319,13 +327,13 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
 
             <div
               className="flex items-center justify-end space-x-2 mt-4 pt-3"
-              style={{ borderTop: "1px solid var(--glass-border)" }}
+              style={{ borderTop: "1px solid var(--border)" }}
             >
               <button
                 onClick={() => handleReject(pendingApproval._id)}
                 disabled={processingApproval === pendingApproval._id}
-                className="flex items-center space-x-1 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50"
-                style={{ background: "var(--error)", boxShadow: "0 2px 8px rgba(251, 113, 133, 0.2)" }}
+                className="flex items-center space-x-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 disabled:opacity-50"
+                style={{ background: "var(--error-bg)", color: "var(--error)" }}
               >
                 <XCircle className="w-4 h-4" />
                 <span>Reject</span>
@@ -334,8 +342,8 @@ export function ApprovalQueue({ userId }: ApprovalQueueProps) {
               <button
                 onClick={() => handleApprove(pendingApproval._id)}
                 disabled={processingApproval === pendingApproval._id}
-                className="flex items-center space-x-1 px-4 py-2 text-sm font-semibold text-white rounded-xl transition-all duration-200 disabled:opacity-50"
-                style={{ background: "var(--success)", boxShadow: "0 2px 8px rgba(52, 211, 153, 0.2)" }}
+                className="flex items-center space-x-1 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-colors duration-150 disabled:opacity-50"
+                style={{ background: "var(--success)" }}
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Approve</span>

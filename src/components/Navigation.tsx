@@ -73,16 +73,16 @@ export function Navigation({
     <>
       {/* Desktop Sidebar */}
       <div
-        className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0"
+        className="hidden lg:flex lg:flex-col lg:w-60 lg:fixed lg:inset-y-0"
         style={{
-          background: "var(--surface-overlay)",
-          borderRight: "1px solid var(--glass-border)",
+          background: "var(--bg-surface)",
+          borderRight: "1px solid var(--border)",
         }}
       >
         {/* Logo/Header */}
         <div
-          className="flex items-center px-6 py-4"
-          style={{ borderBottom: "1px solid var(--glass-border)" }}
+          className="flex items-center px-5 py-4"
+          style={{ borderBottom: "1px solid var(--border)" }}
         >
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -91,12 +91,17 @@ export function Navigation({
             <span className="text-sm font-bold text-white">M</span>
           </div>
           <div className="ml-3">
-            <h1 className="font-semibold" style={{ color: "var(--text-primary)" }}>M365 Operator</h1>
+            <h1
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
+            >
+              M365 Operator
+            </h1>
           </div>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 px-4 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-3 space-y-0.5">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -105,14 +110,26 @@ export function Navigation({
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className="w-full flex items-center px-3 py-2.5 text-sm rounded-xl transition-all duration-200"
+                className="w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors duration-150"
                 style={{
-                  background: isActive ? "var(--glass-bg-strong)" : "transparent",
-                  color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                  border: isActive ? "1px solid var(--glass-border)" : "1px solid transparent",
+                  background: isActive ? "var(--accent-bg)" : "transparent",
+                  color: isActive ? "var(--accent)" : "var(--text-secondary)",
+                  fontWeight: isActive ? 600 : 400,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "var(--bg-muted)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "var(--text-secondary)";
+                  }
                 }}
               >
-                <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
+                <Icon className="w-[18px] h-[18px] mr-3 flex-shrink-0" />
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge && (
                   <span
@@ -128,19 +145,19 @@ export function Navigation({
         </nav>
 
         {/* User Info */}
-        <div className="p-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+        <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center min-w-0">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+                style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
               >
-                <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
+                <span className="text-xs font-semibold">
                   {account.name?.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div className="ml-3 min-w-0">
-                <p className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
+              <div className="ml-2.5 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
                   {account.name?.split(" ")[0] || "User"}
                 </p>
                 <p className="text-xs truncate" style={{ color: "var(--text-ghost)" }}>
@@ -153,6 +170,8 @@ export function Navigation({
               className="p-2 transition-colors rounded-lg"
               style={{ color: "var(--text-ghost)" }}
               title="Sign out"
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-ghost)"; }}
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -164,8 +183,8 @@ export function Navigation({
       <div
         className="lg:hidden px-4 py-3"
         style={{
-          background: "var(--surface-overlay)",
-          borderBottom: "1px solid var(--glass-border)",
+          background: "var(--bg-surface)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
         <div className="flex items-center justify-between">
@@ -176,11 +195,15 @@ export function Navigation({
             >
               <span className="text-sm font-bold text-white">M</span>
             </div>
-            <h1 className="ml-3 font-semibold" style={{ color: "var(--text-primary)" }}>M365 Operator</h1>
+            <h1
+              className="ml-3 text-sm font-semibold"
+              style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
+            >
+              M365 Operator
+            </h1>
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Pending approvals indicator */}
             {pendingApprovalsCount > 0 && (
               <button
                 onClick={() => handleItemClick("approvals")}
@@ -217,11 +240,11 @@ export function Navigation({
         <div
           className="lg:hidden"
           style={{
-            background: "var(--surface-overlay)",
-            borderBottom: "1px solid var(--glass-border)",
+            background: "var(--bg-surface)",
+            borderBottom: "1px solid var(--border)",
           }}
         >
-          <nav className="px-4 py-2 space-y-1">
+          <nav className="px-4 py-2 space-y-0.5">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
@@ -230,14 +253,14 @@ export function Navigation({
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className="w-full flex items-center px-3 py-2.5 text-sm rounded-xl transition-all duration-200"
+                  className="w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors duration-150"
                   style={{
-                    background: isActive ? "var(--glass-bg-strong)" : "transparent",
-                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                    border: isActive ? "1px solid var(--glass-border)" : "1px solid transparent",
+                    background: isActive ? "var(--accent-bg)" : "transparent",
+                    color: isActive ? "var(--accent)" : "var(--text-secondary)",
+                    fontWeight: isActive ? 600 : 400,
                   }}
                 >
-                  <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
+                  <Icon className="w-[18px] h-[18px] mr-3 flex-shrink-0" />
                   <span className="flex-1 text-left">{item.label}</span>
                   {item.badge && (
                     <span
@@ -252,19 +275,19 @@ export function Navigation({
             })}
 
             {/* User section in mobile */}
-            <div className="pt-2 mt-2" style={{ borderTop: "1px solid var(--glass-border)" }}>
+            <div className="pt-2 mt-2" style={{ borderTop: "1px solid var(--border)" }}>
               <div className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-center min-w-0">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{ background: "var(--glass-bg-strong)", border: "1px solid var(--glass-border)" }}
+                    style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
                   >
-                    <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
+                    <span className="text-xs font-semibold">
                       {account.name?.charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div className="ml-3 min-w-0">
-                    <p className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                  <div className="ml-2.5 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
                       {account.name?.split(" ")[0] || "User"}
                     </p>
                     <p className="text-xs truncate" style={{ color: "var(--text-ghost)" }}>

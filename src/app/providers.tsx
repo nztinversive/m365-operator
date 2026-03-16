@@ -163,11 +163,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   if (!convexUrl) {
     return (
-      <div className="gradient-mesh flex min-h-screen items-center justify-center px-6 text-center">
+      <div className="flex min-h-screen items-center justify-center px-6 text-center" style={{ background: "var(--bg-base)" }}>
         <div className="animate-scale-in">
           <p className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Missing Convex configuration</p>
           <p className="mt-2 text-sm" style={{ color: "var(--text-tertiary)" }}>
-            Set <code className="rounded-lg px-1.5 py-0.5" style={{ background: "var(--glass-bg-strong)", color: "var(--text-secondary)" }}>NEXT_PUBLIC_CONVEX_URL</code> before starting the app.
+            Set <code className="rounded-lg px-1.5 py-0.5" style={{ background: "var(--bg-muted)", color: "var(--text-secondary)" }}>NEXT_PUBLIC_CONVEX_URL</code> before starting the app.
           </p>
         </div>
       </div>

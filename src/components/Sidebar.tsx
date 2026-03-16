@@ -62,7 +62,7 @@ export function Sidebar({
   };
 
   const renderNavigation = () => (
-    <nav className="space-y-1">
+    <nav className="space-y-0.5">
       {navigationItems.map((item) => {
         const Icon = item.icon;
         const active = isActive(item.href);
@@ -71,27 +71,27 @@ export function Sidebar({
           <Link
             key={item.href}
             href={item.href}
-            className={`group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+            className={`group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
               active
-                ? "text-[var(--accent-light)]"
+                ? "text-[var(--accent)]"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             }`}
             style={
               active
-                ? { background: "var(--accent-bg)", boxShadow: "0 0 12px var(--accent-glow)" }
+                ? { background: "var(--accent-bg)" }
                 : undefined
             }
             onMouseEnter={(e) => {
-              if (!active) e.currentTarget.style.background = "var(--glass-bg-hover)";
+              if (!active) e.currentTarget.style.background = "var(--bg-muted)";
             }}
             onMouseLeave={(e) => {
               if (!active) e.currentTarget.style.background = "";
             }}
           >
             <Icon
-              className={`mr-3 h-[18px] w-[18px] transition-colors duration-200 ${
+              className={`mr-3 h-[18px] w-[18px] transition-colors duration-150 ${
                 active
-                  ? "text-[var(--accent-light)]"
+                  ? "text-[var(--accent)]"
                   : "text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]"
               }`}
             />
@@ -115,20 +115,15 @@ export function Sidebar({
       <header
         className="border-b px-4 py-3 lg:hidden"
         style={{
-          background: "var(--surface-card)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderColor: "var(--glass-border)",
+          background: "var(--bg-surface)",
+          borderColor: "var(--border)",
         }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold text-white"
-              style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                boxShadow: "0 4px 12px var(--accent-glow)",
-              }}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white"
+              style={{ background: "var(--accent)" }}
             >
               M
             </div>
@@ -145,7 +140,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setMobileOpen((current) => !current)}
-            className="rounded-xl p-2 transition-all duration-200"
+            className="rounded-lg p-2 transition-colors duration-150"
             style={{ color: "var(--text-secondary)" }}
             aria-label="Toggle menu"
           >
@@ -158,14 +153,14 @@ export function Sidebar({
       {mobileOpen && (
         <div
           className="animate-slide-up border-b px-4 py-4 lg:hidden"
-          style={{ background: "var(--bg-surface)", borderColor: "var(--glass-border)" }}
+          style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
         >
           {renderNavigation()}
-          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
             <button
               type="button"
               onClick={onLogout}
-              className="flex w-full items-center rounded-xl px-3 py-2.5 text-sm transition-all duration-200"
+              className="flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors duration-150"
               style={{ color: "var(--text-secondary)" }}
             >
               <LogOut className="mr-3 h-[18px] w-[18px]" />
@@ -177,29 +172,24 @@ export function Sidebar({
 
       {/* Desktop sidebar */}
       <aside
-        className="fixed inset-y-0 hidden w-72 flex-col px-4 py-6 lg:flex"
+        className="fixed inset-y-0 hidden w-60 flex-col px-3 py-5 lg:flex"
         style={{
-          background: "var(--surface-card)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderRight: "1px solid var(--glass-border)",
+          background: "var(--bg-surface)",
+          borderRight: "1px solid var(--border)",
         }}
       >
         {/* Logo */}
-        <div className="mb-8 flex items-center gap-3 px-2">
+        <div className="mb-6 flex items-center gap-3 px-2">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white"
-            style={{
-              background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-              boxShadow: "0 4px 16px var(--accent-glow)",
-            }}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white"
+            style={{ background: "var(--accent)" }}
           >
             M
           </div>
           <div>
             <p
-              className="text-[15px] font-semibold tracking-tight"
-              style={{ color: "var(--text-primary)" }}
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
             >
               M365 Operator
             </p>
@@ -214,10 +204,10 @@ export function Sidebar({
 
         {/* User card */}
         <div
-          className="rounded-2xl p-3"
+          className="rounded-lg p-3"
           style={{
-            background: "var(--glass-bg)",
-            border: "1px solid var(--glass-border)",
+            background: "var(--bg-muted)",
+            border: "1px solid var(--border)",
           }}
         >
           <p className="truncate text-sm font-medium" style={{ color: "var(--text-primary)" }}>
@@ -229,18 +219,18 @@ export function Sidebar({
           <button
             type="button"
             onClick={onLogout}
-            className="mt-3 flex w-full items-center justify-center rounded-xl px-3 py-2 text-sm transition-all duration-200"
+            className="mt-3 flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm transition-colors duration-150"
             style={{
               color: "var(--text-secondary)",
-              border: "1px solid var(--glass-border)",
+              border: "1px solid var(--border)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--glass-border-hover)";
+              e.currentTarget.style.borderColor = "var(--border-hover)";
               e.currentTarget.style.color = "var(--text-primary)";
-              e.currentTarget.style.background = "var(--glass-bg)";
+              e.currentTarget.style.background = "var(--bg-surface)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--glass-border)";
+              e.currentTarget.style.borderColor = "var(--border)";
               e.currentTarget.style.color = "var(--text-secondary)";
               e.currentTarget.style.background = "";
             }}

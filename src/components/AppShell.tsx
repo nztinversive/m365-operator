@@ -162,7 +162,7 @@ export function AppShell({ children, fullHeight = false }: AppShellProps) {
       />
 
       <main
-        className={`lg:pl-72 ${
+        className={`lg:pl-60 ${
           fullHeight
             ? "h-[calc(100dvh-4rem)] lg:h-screen"
             : "min-h-[calc(100dvh-4rem)] lg:min-h-screen"

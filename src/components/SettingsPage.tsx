@@ -198,13 +198,13 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
   const selectedToken = (aiProvider === "claude_max" ? claudeMaxToken : claudeApiKey).trim();
   const isProviderConfigured = selectedToken.length > 0;
 
-  // Glass card wrapper
   const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
     <div
-      className={`rounded-2xl p-6 ${className}`}
+      className={`rounded-xl p-6 ${className}`}
       style={{
-        background: "var(--glass-bg)",
-        border: "1px solid var(--glass-border)",
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow-sm)",
       }}
     >
       {children}
@@ -222,10 +222,13 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
   }) => (
     <div className="mb-5 flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <span style={{ color: "var(--text-tertiary)" }}>
+        <span style={{ color: "var(--text-ghost)" }}>
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)", letterSpacing: "-0.01em" }}
+        >
           {title}
         </h2>
       </div>
@@ -234,11 +237,11 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
   );
 
   const InfoRow = ({ label, value, valueStyle }: { label: string; value: string; valueStyle?: React.CSSProperties }) => (
-    <div className="flex justify-between py-1">
-      <span className="text-sm" style={{ color: "var(--text-ghost)" }}>
+    <div className="flex justify-between py-1.5">
+      <span className="text-sm" style={{ color: "var(--text-tertiary)" }}>
         {label}
       </span>
-      <span className="text-sm" style={valueStyle ?? { color: "var(--text-primary)" }}>
+      <span className="text-sm font-medium" style={valueStyle ?? { color: "var(--text-primary)" }}>
         {value}
       </span>
     </div>
@@ -248,7 +251,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
     <div className="animate-fade-in space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+        <h1
+          className="text-2xl font-bold"
+          style={{ color: "var(--text-primary)", letterSpacing: "-0.025em" }}
+        >
           Settings
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
@@ -259,7 +265,7 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
       {/* User Profile */}
       <Card>
         <SectionHeader icon={User} title="User Profile" />
-        <div className="space-y-1">
+        <div className="space-y-0">
           <InfoRow label="Name" value={account.name || "Not provided"} />
           <InfoRow label="Email" value={account.username ?? ""} />
           <InfoRow label="Account created" value={user ? formatDate(user.createdAt) : "Loading..."} />
@@ -295,7 +301,7 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
 
         {msConnection ? (
           <div className="space-y-5">
-            <div className="space-y-1">
+            <div className="space-y-0">
               <InfoRow label="Connection email" value={msConnection.email} />
               {msConnection.displayName && <InfoRow label="Display name" value={msConnection.displayName} />}
               <InfoRow label="Last updated" value={formatDate(msConnection.updatedAt)} />
@@ -322,14 +328,14 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex space-x-3 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+            <div className="flex space-x-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               {isTokenExpired && (
                 <button
                   onClick={() => {
                     alert("Please sign out and sign back in to refresh your connection.");
                   }}
-                  className="flex items-center space-x-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200"
-                  style={{ background: "var(--accent-bg)", color: "var(--accent-light)" }}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150"
+                  style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span>Refresh Connection</span>
@@ -338,7 +344,7 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
               <button
                 onClick={handleDisconnectMicrosoft}
                 disabled={isDisconnecting}
-                className="flex items-center space-x-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-50"
+                className="flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50"
                 style={{ background: "var(--error-bg)", color: "var(--error)" }}
               >
                 <Trash2 className="h-4 w-4" />
@@ -368,10 +374,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
           icon={Bot}
           title="AI Provider"
           right={
-            <div className="flex items-center space-x-2" style={{ color: isProviderConfigured ? "var(--success)" : "var(--error)" }}>
+            <div className="flex items-center space-x-2" style={{ color: isProviderConfigured ? "var(--success)" : "var(--text-ghost)" }}>
               <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: isProviderConfigured ? "var(--success)" : "var(--error)" }}
+                className="h-2 w-2 rounded-full"
+                style={{ background: isProviderConfigured ? "var(--success)" : "var(--border)" }}
               />
               <span className="text-sm font-medium">{isProviderConfigured ? "Connected" : "Not configured"}</span>
             </div>
@@ -390,10 +396,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
               ].map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex cursor-pointer items-center space-x-3 rounded-xl px-4 py-3 transition-all duration-200"
+                  className="flex cursor-pointer items-center space-x-3 rounded-lg px-4 py-3 transition-colors duration-150"
                   style={{
-                    background: aiProvider === opt.value ? "var(--accent-bg)" : "var(--glass-bg)",
-                    border: `1px solid ${aiProvider === opt.value ? "var(--accent)" : "var(--glass-border)"}`,
+                    background: aiProvider === opt.value ? "var(--accent-bg)" : "var(--bg-muted)",
+                    border: `1px solid ${aiProvider === opt.value ? "var(--accent)" : "var(--border)"}`,
                   }}
                 >
                   <input
@@ -423,30 +429,38 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
                   value={claudeMaxToken}
                   onChange={(event) => setClaudeMaxToken(event.target.value)}
                   placeholder="sk-ant-oat01-..."
-                  className="focus-ring flex-1 rounded-xl px-4 py-2.5 text-sm transition-all duration-200"
+                  className="focus-ring flex-1 rounded-lg px-4 py-2.5 text-sm transition-colors duration-150"
                   style={{
-                    background: "var(--glass-bg-strong)",
-                    border: "1px solid var(--glass-border)",
+                    background: "var(--bg-muted)",
+                    border: "1px solid var(--border)",
                     color: "var(--text-primary)",
                   }}
                   autoComplete="off"
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = "var(--accent)";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-ring)";
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--glass-border)";
+                    e.currentTarget.style.borderColor = "var(--border)";
                     e.currentTarget.style.boxShadow = "";
                   }}
                 />
                 <button
                   onClick={() => void handlePasteToken("claude_max")}
                   type="button"
-                  className="inline-flex items-center justify-center space-x-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200"
+                  className="inline-flex items-center justify-center space-x-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150"
                   style={{
-                    background: "var(--glass-bg-strong)",
-                    border: "1px solid var(--glass-border)",
+                    background: "var(--bg-muted)",
+                    border: "1px solid var(--border)",
                     color: "var(--text-secondary)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-hover)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
                   }}
                 >
                   <ClipboardPaste className="h-4 w-4" />
@@ -465,30 +479,38 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
                   value={claudeApiKey}
                   onChange={(event) => setClaudeApiKey(event.target.value)}
                   placeholder="sk-ant-..."
-                  className="focus-ring flex-1 rounded-xl px-4 py-2.5 text-sm transition-all duration-200"
+                  className="focus-ring flex-1 rounded-lg px-4 py-2.5 text-sm transition-colors duration-150"
                   style={{
-                    background: "var(--glass-bg-strong)",
-                    border: "1px solid var(--glass-border)",
+                    background: "var(--bg-muted)",
+                    border: "1px solid var(--border)",
                     color: "var(--text-primary)",
                   }}
                   autoComplete="off"
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = "var(--accent)";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-ring)";
                   }}
                   onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "var(--glass-border)";
+                    e.currentTarget.style.borderColor = "var(--border)";
                     e.currentTarget.style.boxShadow = "";
                   }}
                 />
                 <button
                   onClick={() => void handlePasteToken("claude_api")}
                   type="button"
-                  className="inline-flex items-center justify-center space-x-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200"
+                  className="inline-flex items-center justify-center space-x-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150"
                   style={{
-                    background: "var(--glass-bg-strong)",
-                    border: "1px solid var(--glass-border)",
+                    background: "var(--bg-muted)",
+                    border: "1px solid var(--border)",
                     color: "var(--text-secondary)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border-hover)";
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.color = "var(--text-secondary)";
                   }}
                 >
                   <ClipboardPaste className="h-4 w-4" />
@@ -505,10 +527,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
             <select
               value={claudeModel}
               onChange={(event) => setClaudeModel(event.target.value)}
-              className="focus-ring w-full rounded-xl px-4 py-2.5 text-sm transition-all duration-200 md:w-auto"
+              className="focus-ring w-full rounded-lg px-4 py-2.5 text-sm transition-colors duration-150 md:w-auto"
               style={{
-                background: "var(--glass-bg-strong)",
-                border: "1px solid var(--glass-border)",
+                background: "var(--bg-muted)",
+                border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
@@ -528,7 +550,7 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
 
           {aiMessage && (
             <div
-              className="rounded-xl px-3 py-2 text-sm font-medium"
+              className="rounded-lg px-3 py-2 text-sm font-medium"
               style={{
                 background: aiMessage.type === "success" ? "var(--success-bg)" : "var(--error-bg)",
                 color: aiMessage.type === "success" ? "var(--success)" : "var(--error)",
@@ -543,11 +565,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
               onClick={() => void handleSaveAiProviderSettings()}
               disabled={isSavingAiSettings}
               type="button"
-              className="inline-flex items-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50"
-              style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                boxShadow: "0 2px 8px var(--accent-glow)",
-              }}
+              className="inline-flex items-center space-x-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 disabled:opacity-50"
+              style={{ background: "var(--accent)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-dark)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
             >
               {isSavingAiSettings ? (
                 <>
@@ -562,8 +583,10 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
               onClick={() => void handleTestAiSettings()}
               disabled={isTestingAiSettings}
               type="button"
-              className="inline-flex items-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50"
-              style={{ background: "var(--accent-bg)", color: "var(--accent-light)" }}
+              className="inline-flex items-center space-x-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-150 disabled:opacity-50"
+              style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent-bg-hover)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-bg)"; }}
             >
               {isTestingAiSettings ? (
                 <>
@@ -583,17 +606,17 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
         <SectionHeader icon={Settings} title="Available Capabilities" />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {[
-            { icon: Mail, label: "Email Management", desc: "Read, send, and summarize emails", color: "var(--accent-light)" },
+            { icon: Mail, label: "Email Management", desc: "Read, send, and summarize emails", color: "var(--accent)" },
             { icon: Calendar, label: "Calendar Access", desc: "Read and create calendar events", color: "var(--success)" },
-            { icon: Users, label: "Teams Integration", desc: "Read and post to Teams channels", color: "#c084fc" },
+            { icon: Users, label: "Teams Integration", desc: "Read and post to Teams channels", color: "#8B5CF6" },
             { icon: FileText, label: "Document Generation", desc: "Create Word, Excel, and PowerPoint files", color: "var(--warning)" },
           ].map((cap) => {
             const Icon = cap.icon;
             return (
               <div
                 key={cap.label}
-                className="flex items-start space-x-3 rounded-xl p-3"
-                style={{ background: "var(--glass-bg-strong)" }}
+                className="flex items-start space-x-3 rounded-lg p-3"
+                style={{ background: "var(--bg-muted)" }}
               >
                 <Icon className="mt-0.5 h-5 w-5 flex-shrink-0" style={{ color: cap.color }} />
                 <div>

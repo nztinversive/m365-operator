@@ -27,7 +27,7 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
   const getDocumentIcon = (type: string) => {
     switch (type) {
       case "docx":
-        return <FileText className="h-5 w-5" style={{ color: "var(--accent-light)" }} />;
+        return <FileText className="h-5 w-5" style={{ color: "var(--accent)" }} />;
       case "xlsx":
         return <FileSpreadsheet className="h-5 w-5" style={{ color: "var(--success)" }} />;
       case "pptx":
@@ -103,7 +103,7 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center animate-fade-in">
-          <Folder className="mx-auto mb-4 h-12 w-12 animate-pulse" style={{ color: "var(--text-tertiary)" }} />
+          <Folder className="mx-auto mb-4 h-12 w-12 animate-pulse" style={{ color: "var(--text-ghost)" }} />
           <p style={{ color: "var(--text-ghost)" }}>Loading documents...</p>
         </div>
       </div>
@@ -143,7 +143,10 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--text-primary)", letterSpacing: "-0.025em" }}
+          >
             Documents
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
@@ -171,18 +174,18 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search documents..."
-            className="focus-ring w-full rounded-xl py-2.5 pl-10 pr-4 text-sm transition-all duration-200"
+            className="focus-ring w-full rounded-lg py-2.5 pl-10 pr-4 text-sm transition-colors duration-150"
             style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)";
+              e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-ring)";
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--glass-border)";
+              e.currentTarget.style.borderColor = "var(--border)";
               e.currentTarget.style.boxShadow = "";
             }}
           />
@@ -193,10 +196,10 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="focus-ring appearance-none rounded-xl py-2.5 pl-10 pr-8 text-sm transition-all duration-200"
+            className="focus-ring appearance-none rounded-lg py-2.5 pl-10 pr-8 text-sm transition-colors duration-150"
             style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
               color: "var(--text-primary)",
             }}
           >
@@ -214,23 +217,22 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
         {filteredDocuments?.map((document, i) => (
           <div
             key={document._id}
-            className="animate-slide-up rounded-2xl p-4 transition-all duration-200"
+            className="animate-slide-up rounded-xl p-4 transition-all duration-150"
             style={{
-              background: "var(--glass-bg)",
-              border: "1px solid var(--glass-border)",
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow-sm)",
               animationDelay: `${Math.min(i * 50, 300)}ms`,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--glass-bg-strong)";
-              e.currentTarget.style.borderColor = "var(--glass-border-hover)";
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.3)";
+              e.currentTarget.style.borderColor = "var(--border-hover)";
+              e.currentTarget.style.boxShadow = "var(--shadow-md)";
+              e.currentTarget.style.transform = "translateY(-1px)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--glass-bg)";
-              e.currentTarget.style.borderColor = "var(--glass-border)";
+              e.currentTarget.style.borderColor = "var(--border)";
+              e.currentTarget.style.boxShadow = "var(--shadow-sm)";
               e.currentTarget.style.transform = "";
-              e.currentTarget.style.boxShadow = "";
             }}
           >
             <div className="mb-3 flex items-start justify-between">
@@ -259,16 +261,16 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center space-x-2 pt-3" style={{ borderTop: "1px solid var(--glass-border)" }}>
+            <div className="flex items-center space-x-2 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
               {document.webUrl ? (
                 <a
                   href={document.webUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center space-x-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200"
+                  className="flex flex-1 items-center justify-center space-x-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-150"
                   style={{
                     background: "var(--accent-bg)",
-                    color: "var(--accent-light)",
+                    color: "var(--accent)",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "var(--accent-bg-hover)";
@@ -283,8 +285,8 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
               ) : (
                 <button
                   disabled
-                  className="flex flex-1 cursor-not-allowed items-center justify-center space-x-1.5 rounded-xl px-3 py-2 text-xs opacity-40"
-                  style={{ background: "var(--glass-bg)", color: "var(--text-ghost)" }}
+                  className="flex flex-1 cursor-not-allowed items-center justify-center space-x-1.5 rounded-lg px-3 py-2 text-xs opacity-40"
+                  style={{ background: "var(--bg-muted)", color: "var(--text-ghost)" }}
                 >
                   <Download className="h-3.5 w-3.5" />
                   <span>Processing...</span>
@@ -310,8 +312,8 @@ export function DocumentsPage({ userId }: DocumentsPageProps) {
               setSearchQuery("");
               setFilterType("all");
             }}
-            className="mt-4 text-sm font-medium transition-colors duration-200"
-            style={{ color: "var(--accent-light)" }}
+            className="mt-4 text-sm font-medium transition-colors duration-150"
+            style={{ color: "var(--accent)" }}
           >
             Clear filters
           </button>

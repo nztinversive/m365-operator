@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { AccountInfo } from "@azure/msal-browser";
 import { useMutation, useQuery } from "convex/react";
 import ReactMarkdown from "react-markdown";
@@ -8,13 +15,8 @@ import remarkGfm from "remark-gfm";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  Send,
-  LogOut,
   Mail,
   Calendar,
-  Loader2,
-  Bot,
-  User,
   Sparkles,
   Plus,
   MessageSquare,
@@ -24,7 +26,15 @@ import {
   ShieldX,
   X,
   RotateCcw,
+  ArrowUp,
+  FileSpreadsheet,
+  Presentation,
+  Zap,
+  Clock,
+  ChevronRight,
 } from "lucide-react";
+
+/* ─── Types ─── */
 
 interface ChatViewProps {
   account: AccountInfo;
@@ -38,6 +48,8 @@ interface TimelineMessage {
   content: string;
   timestamp: number;
 }
+
+/* ─── Helpers ─── */
 
 function formatJobType(type: string): string {
   return type
@@ -56,12 +68,15 @@ function formatJobStatus(job: {
   const typeLabel = formatJobType(job.type);
   if (job.status === "queued") return `Queued: ${typeLabel}`;
   if (job.status === "running") {
-    const progress = typeof job.progress === "number" ? ` (${job.progress}%)` : "";
-    const detail = job.progressMessage ? ` - ${job.progressMessage}` : "";
+    const progress =
+      typeof job.progress === "number" ? ` (${job.progress}%)` : "";
+    const detail = job.progressMessage ? ` \u2014 ${job.progressMessage}` : "";
     return `Running: ${typeLabel}${progress}${detail}`;
   }
-  if (job.status === "waiting_approval") return `Waiting for approval: ${typeLabel}`;
-  if (job.status === "failed") return `Failed: ${typeLabel}${job.error ? ` - ${job.error}` : ""}`;
+  if (job.status === "waiting_approval")
+    return `Waiting for approval: ${typeLabel}`;
+  if (job.status === "failed")
+    return `Failed: ${typeLabel}${job.error ? ` \u2014 ${job.error}` : ""}`;
   return `Status updated: ${typeLabel}`;
 }
 
@@ -75,32 +90,106 @@ function formatConversationTime(timestamp: number): string {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return new Date(timestamp).toLocaleDateString();
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-const assistantMarkdownClassName = [
-  "text-sm leading-relaxed",
-  "[&_h1]:mb-3 [&_h1]:mt-4 [&_h1]:text-xl [&_h1]:font-semibold sm:[&_h1]:text-2xl",
-  "[&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-semibold sm:[&_h2]:text-xl",
-  "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold sm:[&_h3]:text-lg",
+function formatMessageTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/* ─── Markdown classes ─── */
+
+const mdClasses = [
+  "text-[13.5px] leading-[1.7]",
+  "[&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:tracking-tight",
+  "[&_h2]:mb-2.5 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:tracking-tight",
+  "[&_h3]:mb-2 [&_h3]:mt-3.5 [&_h3]:text-sm [&_h3]:font-semibold",
   "[&_h1]:text-[var(--text-primary)] [&_h2]:text-[var(--text-primary)] [&_h3]:text-[var(--text-primary)]",
-  "[&_p]:my-2",
-  "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
-  "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
-  "[&_li]:my-1",
-  "[&_a]:text-[var(--accent-light)] [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-[var(--accent)]",
-  "[&_code]:rounded-md [&_code]:bg-[rgba(255,255,255,0.06)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs",
-  "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:p-3 [&_pre]:text-xs",
-  "[&_pre]:bg-[rgba(0,0,0,0.3)] [&_pre]:border [&_pre]:border-[rgba(255,255,255,0.04)]",
-  "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
-  "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs sm:[&_table]:text-sm",
-  "[&_th]:border [&_th]:border-[rgba(255,255,255,0.08)] [&_th]:bg-[rgba(255,255,255,0.04)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left sm:[&_th]:px-3 sm:[&_th]:py-2",
-  "[&_td]:border [&_td]:border-[rgba(255,255,255,0.06)] [&_td]:px-2 [&_td]:py-1.5 sm:[&_td]:px-3 sm:[&_td]:py-2",
-  "[&_tbody_tr:nth-child(even)]:bg-[rgba(255,255,255,0.02)]",
+  "[&_p]:my-2.5 [&_p]:first:mt-0 [&_p]:last:mb-0",
+  "[&_ul]:my-2.5 [&_ul]:list-disc [&_ul]:pl-5",
+  "[&_ol]:my-2.5 [&_ol]:list-decimal [&_ol]:pl-5",
+  "[&_li]:my-1 [&_li]:pl-0.5",
+  "[&_a]:text-[var(--accent)] [&_a]:underline [&_a]:decoration-[var(--accent)]/30 [&_a]:underline-offset-2 [&_a]:transition-colors hover:[&_a]:decoration-[var(--accent)]",
+  "[&_code]:rounded-md [&_code]:bg-[var(--bg-muted)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[12px] [&_code]:text-[var(--text-secondary)] [&_code]:font-mono",
+  "[&_pre]:my-3.5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:p-4 [&_pre]:text-[12px] [&_pre]:leading-relaxed",
+  "[&_pre]:bg-[#1a1b26] [&_pre]:text-[#c0caf5] [&_pre]:border [&_pre]:border-[#2a2b3d]",
+  "[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit [&_pre_code]:font-mono",
+  "[&_table]:my-3.5 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[13px]",
+  "[&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--bg-muted)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[12px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-[var(--text-tertiary)]",
+  "[&_td]:border [&_td]:border-[var(--border)] [&_td]:px-3 [&_td]:py-2",
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-[var(--accent)] [&_blockquote]:pl-4 [&_blockquote]:my-3 [&_blockquote]:text-[var(--text-secondary)] [&_blockquote]:italic",
+  "[&_hr]:my-5 [&_hr]:border-[var(--border)]",
+  "[&_strong]:font-semibold [&_strong]:text-[var(--text-primary)]",
 ].join(" ");
 
-export function ChatView({ account, onLogout, userId }: ChatViewProps) {
-  const [activeConversationId, setActiveConversationId] = useState<Id<"conversations"> | null>(null);
+/* ─── Quick actions for empty state ─── */
+
+const QUICK_ACTIONS = [
+  {
+    label: "Summarize emails",
+    description: "Get a digest of your unread messages",
+    icon: Mail,
+    prompt: "Summarize my unread emails",
+    color: "#3B82F6",
+    colorBg: "rgba(59, 130, 246, 0.06)",
+  },
+  {
+    label: "Today's schedule",
+    description: "See what's on your calendar",
+    icon: Calendar,
+    prompt: "What's on my calendar today?",
+    color: "#10B981",
+    colorBg: "rgba(16, 185, 129, 0.06)",
+  },
+  {
+    label: "Morning briefing",
+    description: "Emails, calendar & priorities combined",
+    icon: Sparkles,
+    prompt:
+      "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.",
+    color: "#7C3AED",
+    colorBg: "rgba(124, 58, 237, 0.06)",
+  },
+  {
+    label: "Status deck",
+    description: "Generate a weekly status PowerPoint",
+    icon: Presentation,
+    prompt:
+      "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.",
+    color: "#F59E0B",
+    colorBg: "rgba(245, 158, 11, 0.06)",
+  },
+  {
+    label: "Action tracker",
+    description: "Excel tracker from email action items",
+    icon: FileSpreadsheet,
+    prompt:
+      "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.",
+    color: "#EF4444",
+    colorBg: "rgba(239, 68, 68, 0.06)",
+  },
+  {
+    label: "Draft a reply",
+    description: "Help compose an email response",
+    icon: Zap,
+    prompt:
+      "Show me my most recent unread emails and help me draft replies to the important ones.",
+    color: "#06B6D4",
+    colorBg: "rgba(6, 182, 212, 0.06)",
+  },
+];
+
+/* ─── Component ─── */
+
+export function ChatView({ account: _account, onLogout: _onLogout, userId }: ChatViewProps) {
+  const [activeConversationId, setActiveConversationId] =
+    useState<Id<"conversations"> | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,13 +213,16 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
   const addMessage = useMutation(api.messages.addMessage);
   const createJob = useMutation(api.jobs.createJob);
-  const pendingApprovals = useQuery(api.approvals.getPendingApprovals, { userId });
+  const pendingApprovals = useQuery(api.approvals.getPendingApprovals, {
+    userId,
+  });
   const approveAction = useMutation(api.approvals.approveAction);
   const rejectAction = useMutation(api.approvals.rejectAction);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-select first conversation
   useEffect(() => {
     if (conversations && conversations.length > 0 && !activeConversationId) {
       setActiveConversationId(conversations[0]._id);
@@ -139,23 +231,25 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
   const activeJob = useMemo(() => {
     if (!jobs) return null;
-    const runningJob = jobs.find((job) => job.status === "running");
-    if (runningJob) return runningJob;
-    return jobs.find((job) => job.status === "queued") ?? null;
+    return (
+      jobs.find((job) => job.status === "running") ??
+      jobs.find((job) => job.status === "queued") ??
+      null
+    );
   }, [jobs]);
 
   const timeline = useMemo<TimelineMessage[]>(() => {
-    const persistedMessages: TimelineMessage[] = (messages ?? []).map((message) => ({
-      id: message._id,
-      role: message.role,
-      content: message.content,
-      timestamp: message.createdAt,
+    const persistedMessages: TimelineMessage[] = (messages ?? []).map((m) => ({
+      id: m._id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.createdAt,
     }));
 
     const assistantMessageJobIds = new Set(
       (messages ?? [])
-        .filter((message) => message.role === "assistant" && message.jobId)
-        .map((message) => message.jobId)
+        .filter((m) => m.role === "assistant" && m.jobId)
+        .map((m) => m.jobId)
     );
 
     const completedJobFallbacks: TimelineMessage[] = (jobs ?? [])
@@ -184,23 +278,40 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
       )
       .map((job) => ({
         id: `job-status-${job._id}`,
-        role: (job.status === "failed" ? "assistant" : "system") as "assistant" | "system",
+        role: (job.status === "failed" ? "assistant" : "system") as
+          | "assistant"
+          | "system",
         content: formatJobStatus(job),
         timestamp: job.updatedAt,
       }));
 
-    return [...persistedMessages, ...completedJobFallbacks, ...liveJobMessages].sort(
-      (a, b) => a.timestamp - b.timestamp
-    );
+    return [
+      ...persistedMessages,
+      ...completedJobFallbacks,
+      ...liveJobMessages,
+    ].sort((a, b) => a.timestamp - b.timestamp);
   }, [jobs, messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeJob, isSubmitting, timeline]);
 
+  // Auto-resize textarea
+  const resizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, []);
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [input, resizeTextarea]);
+
   const handleRetry = async (jobId: string) => {
     const failedJob = jobs?.find((j) => j._id === jobId);
-    if (!failedJob || !failedJob.input?.message || !activeConversationId) return;
+    if (!failedJob || !failedJob.input?.message || !activeConversationId)
+      return;
 
     const originalMessage = failedJob.input.message as string;
     setIsSubmitting(true);
@@ -211,7 +322,6 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
         type: failedJob.type,
         input: { message: originalMessage },
       });
-
       await addMessage({
         userId,
         conversationId: activeConversationId,
@@ -223,22 +333,28 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
       console.error("Failed to retry job:", error);
     } finally {
       setIsSubmitting(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   };
 
   const handleNewConversation = async () => {
     try {
-      const id = await createConversation({ userId, title: "New conversation" });
+      const id = await createConversation({
+        userId,
+        title: "New conversation",
+      });
       setActiveConversationId(id);
       setSidebarOpen(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     } catch (error) {
       console.error("Failed to create conversation:", error);
     }
   };
 
-  const handleSend = async (prompt?: string, forceNewConversation?: boolean) => {
+  const handleSend = async (
+    prompt?: string,
+    forceNewConversation?: boolean
+  ) => {
     const text = (prompt ?? input).trim();
     if (!text || isSubmitting) return;
 
@@ -248,7 +364,10 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
     try {
       let convId = activeConversationId;
       if (!convId || forceNewConversation) {
-        convId = await createConversation({ userId, title: "New conversation" });
+        convId = await createConversation({
+          userId,
+          title: "New conversation",
+        });
         setActiveConversationId(convId);
       }
 
@@ -269,7 +388,8 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
       const currentConv = conversations?.find((c) => c._id === convId);
       if (currentConv && currentConv.title === "New conversation") {
-        const title = text.length > 50 ? text.substring(0, 47) + "..." : text;
+        const title =
+          text.length > 50 ? text.substring(0, 47) + "..." : text;
         await updateConversationTitle({ id: convId, title });
       }
     } catch (error) {
@@ -279,553 +399,462 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           userId,
           conversationId: activeConversationId ?? undefined,
           role: "system",
-          content: "I could not queue that request. Please try again in a moment.",
+          content:
+            "I could not queue that request. Please try again in a moment.",
         });
       } catch (innerError) {
         console.error("Failed to save error message:", innerError);
       }
     } finally {
       setIsSubmitting(false);
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void handleSend();
+    }
+  };
+
+  const isEmpty = timeline.length === 0;
+
   return (
-    <div className="flex h-full" style={{ background: "var(--bg-base)" }}>
-      {/* Mobile overlay backdrop */}
+    <div className="chat-root flex h-full">
+      {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 lg:hidden"
-          style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
+          className="chat-overlay fixed inset-0 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Conversation sidebar */}
+      {/* ─── Conversation sidebar ─── */}
       <div
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden"
-        } fixed inset-y-0 left-0 z-30 w-72 transition-transform duration-200 lg:static lg:z-auto ${
-          sidebarOpen ? "lg:w-64" : ""
+        className={`chat-sidebar ${
+          sidebarOpen
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0 lg:w-0 lg:overflow-hidden"
+        } fixed inset-y-0 left-0 z-30 w-72 transition-all duration-200 ease-out lg:static lg:z-auto ${
+          sidebarOpen ? "lg:w-[280px]" : ""
         }`}
-        style={{
-          background: "var(--surface-overlay)",
-          borderRight: "1px solid var(--glass-border)",
-        }}
       >
         <div className="flex h-full flex-col">
-          <div
-            className="flex items-center justify-between px-3 py-3"
-            style={{ borderBottom: "1px solid var(--glass-border)" }}
-          >
-            <span
-              className="text-[11px] font-semibold uppercase tracking-widest"
-              style={{ color: "var(--text-tertiary)" }}
-            >
+          {/* Sidebar header */}
+          <div className="chat-sidebar-header flex items-center justify-between px-4 py-3.5">
+            <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-ghost)]">
               Conversations
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={handleNewConversation}
-                className="rounded-lg p-1.5 transition-all duration-200"
-                style={{ color: "var(--text-tertiary)" }}
+                className="chat-icon-btn rounded-lg p-1.5"
                 title="New conversation"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--glass-bg-hover)";
-                  e.currentTarget.style.color = "var(--text-primary)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "";
-                  e.currentTarget.style.color = "var(--text-tertiary)";
-                }}
               >
                 <Plus className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="rounded-lg p-1.5 transition-all duration-200 lg:hidden"
-                style={{ color: "var(--text-tertiary)" }}
+                className="chat-icon-btn rounded-lg p-1.5 lg:hidden"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            {conversations?.map((conv) => (
-              <button
-                key={conv._id}
-                onClick={() => {
-                  setActiveConversationId(conv._id);
-                  setSidebarOpen(false);
-                }}
-                className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-all duration-150"
-                style={
-                  activeConversationId === conv._id
-                    ? { background: "var(--glass-bg-strong)", color: "var(--text-primary)" }
-                    : { color: "var(--text-tertiary)" }
-                }
-                onMouseEnter={(e) => {
-                  if (activeConversationId !== conv._id) {
-                    e.currentTarget.style.background = "var(--glass-bg)";
-                    e.currentTarget.style.color = "var(--text-secondary)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeConversationId !== conv._id) {
-                    e.currentTarget.style.background = "";
-                    e.currentTarget.style.color = "var(--text-tertiary)";
-                  }
-                }}
-              >
-                <MessageSquare className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{conv.title}</p>
-                  <p className="text-[10px]" style={{ color: "var(--text-ghost)" }}>
-                    {formatConversationTime(conv.updatedAt)}
-                  </p>
-                </div>
-              </button>
-            ))}
+          {/* Conversation list */}
+          <div className="flex-1 overflow-y-auto px-2 pb-3 scrollbar-thin">
+            {conversations?.map((conv) => {
+              const active = activeConversationId === conv._id;
+              return (
+                <button
+                  key={conv._id}
+                  onClick={() => {
+                    setActiveConversationId(conv._id);
+                    setSidebarOpen(false);
+                  }}
+                  className={`chat-conv-item group flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all duration-150 ${
+                    active ? "chat-conv-active" : ""
+                  }`}
+                >
+                  <MessageSquare
+                    className={`mt-[3px] h-3.5 w-3.5 flex-shrink-0 transition-colors ${
+                      active
+                        ? "text-[var(--accent)]"
+                        : "text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)]"
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`truncate text-[13px] font-medium transition-colors ${
+                        active
+                          ? "text-[var(--accent)]"
+                          : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {conv.title}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <Clock className="h-2.5 w-2.5 text-[var(--text-ghost)]" />
+                      <p className="text-[11px] text-[var(--text-ghost)]">
+                        {formatConversationTime(conv.updatedAt)}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
 
             {conversations?.length === 0 && (
-              <div className="px-3 py-6 text-center text-xs" style={{ color: "var(--text-ghost)" }}>
-                No conversations yet
+              <div className="px-3 py-8 text-center">
+                <MessageSquare className="mx-auto mb-2 h-5 w-5 text-[var(--text-ghost)]" />
+                <p className="text-[12px] text-[var(--text-ghost)]">
+                  No conversations yet
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Main chat area */}
+      {/* ─── Main chat area ─── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Header */}
-        <header
-          className="flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3"
-          style={{
-            background: "var(--surface-card)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            borderBottom: "1px solid var(--glass-border)",
-          }}
-        >
-          <div className="flex items-center gap-2 sm:gap-3">
+        {/* Minimal header */}
+        <header className="chat-header flex items-center justify-between px-4 py-2.5 sm:px-5">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-lg p-1.5 transition-all duration-200"
-              style={{ color: "var(--text-tertiary)" }}
+              className="chat-icon-btn rounded-lg p-1.5"
               title={sidebarOpen ? "Close sidebar" : "Open conversations"}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--glass-bg-hover)";
-                e.currentTarget.style.color = "var(--text-primary)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "";
-                e.currentTarget.style.color = "var(--text-tertiary)";
-              }}
             >
               {sidebarOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
+                <PanelLeftClose className="h-[18px] w-[18px]" />
               ) : (
-                <PanelLeft className="h-4 w-4" />
+                <PanelLeft className="h-[18px] w-[18px]" />
               )}
             </button>
 
-            <div
-              className="hidden h-8 w-8 items-center justify-center rounded-lg sm:flex"
-              style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                boxShadow: "0 2px 8px var(--accent-glow)",
-              }}
-            >
-              <span className="text-sm font-bold text-white">M</span>
-            </div>
-            <div className="hidden sm:block">
-              <h1 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            <div className="flex items-center gap-2">
+              <div className="chat-avatar-sm flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold text-white">
+                M
+              </div>
+              <span className="text-[13px] font-semibold tracking-tight text-[var(--text-primary)]">
                 M365 Operator
-              </h1>
-              <p className="text-[11px]" style={{ color: "var(--text-ghost)" }}>
-                {account.username}
-              </p>
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleNewConversation}
-              className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white transition-all duration-200 sm:px-3"
-              style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                boxShadow: "0 2px 8px var(--accent-glow)",
-              }}
-              title="New conversation"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 16px rgba(99, 102, 241, 0.3)";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 2px 8px var(--accent-glow)";
-                e.currentTarget.style.transform = "";
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New Chat</span>
-            </button>
-          </div>
+          <button
+            onClick={handleNewConversation}
+            className="chat-new-btn group flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-150"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">New Chat</span>
+          </button>
         </header>
 
-        {/* Quick action buttons */}
-        <div
-          className="flex gap-2 overflow-x-auto px-3 py-2.5 scrollbar-none sm:px-4"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}
-        >
-          {[
-            { label: "Emails", icon: Mail, prompt: "Summarize my unread emails" },
-            { label: "Calendar", icon: Calendar, prompt: "What's on my calendar today?" },
-            {
-              label: "Briefing",
-              icon: Sparkles,
-              prompt: "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.",
-            },
-            {
-              label: "Deck",
-              icon: null,
-              emoji: "\u{1F4CA}",
-              prompt: "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.",
-            },
-            {
-              label: "Tracker",
-              icon: null,
-              emoji: "\u{1F4CB}",
-              prompt: "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.",
-            },
-          ].map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.label}
-                onClick={() => void handleSend(action.prompt, true)}
-                disabled={isSubmitting}
-                className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-40"
-                style={{
-                  background: "var(--glass-bg)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.background = "var(--glass-bg-hover)";
-                    e.currentTarget.style.borderColor = "var(--glass-border-hover)";
-                    e.currentTarget.style.color = "var(--text-primary)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "var(--glass-bg)";
-                  e.currentTarget.style.borderColor = "var(--glass-border)";
-                  e.currentTarget.style.color = "var(--text-secondary)";
-                }}
-              >
-                {Icon ? <Icon className="h-3 w-3" /> : <span>{action.emoji}</span>}
-                {action.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Messages area */}
-        <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 scrollbar-thin sm:space-y-4 sm:px-4 sm:py-4">
-          {timeline.length === 0 && (
-            <div className="flex gap-3 animate-fade-in">
-              <div
-                className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "var(--accent-bg)", color: "var(--accent-light)" }}
-              >
-                <Bot className="h-4 w-4" />
-              </div>
-              <div
-                className="max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-relaxed sm:max-w-[80%]"
-                style={{
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                Welcome! Ask me about your email, calendar, or request a briefing.
-              </div>
-            </div>
-          )}
-
-          {timeline.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : ""}`}
-            >
-              {message.role !== "user" && (
-                <div
-                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
-                  style={
-                    message.role === "assistant"
-                      ? { background: "var(--accent-bg)", color: "var(--accent-light)" }
-                      : { background: "var(--glass-bg)", color: "var(--text-ghost)" }
-                  }
-                >
-                  {message.role === "assistant" ? (
-                    <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  ) : (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  )}
-                </div>
-              )}
-
-              <div
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:max-w-[80%] sm:px-4 sm:py-3 ${
-                  message.role === "system" ? "text-xs italic" : ""
-                }`}
-                style={
-                  message.role === "user"
-                    ? {
-                        background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                        color: "white",
-                        boxShadow: "0 2px 8px var(--accent-glow)",
-                      }
-                    : message.role === "system"
-                    ? { background: "var(--glass-bg)", color: "var(--text-ghost)" }
-                    : {
-                        background: "var(--surface-card)",
-                        border: "1px solid var(--glass-border)",
-                        color: "var(--text-secondary)",
-                      }
-                }
-              >
-                {message.role === "assistant" ? (
-                  <div className={assistantMarkdownClassName}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {message.content}
-                    </ReactMarkdown>
-                    {message.id.startsWith("job-status-") &&
-                      (() => {
-                        const jobId = message.id.replace("job-status-", "");
-                        const job = jobs?.find((j) => j._id === jobId);
-                        if (job?.status !== "failed") return null;
-                        return (
-                          <button
-                            onClick={() => void handleRetry(jobId)}
-                            disabled={isSubmitting}
-                            className="mt-2 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-200 disabled:opacity-50"
-                            style={{
-                              background: "var(--error-bg)",
-                              color: "var(--error)",
-                            }}
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Retry
-                          </button>
-                        );
-                      })()}
+        {/* ─── Messages or Empty State ─── */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          {isEmpty ? (
+            /* ─── Empty state ─── */
+            <div className="flex h-full flex-col items-center justify-center px-5 py-10">
+              <div className="w-full max-w-2xl animate-fade-in">
+                {/* Greeting */}
+                <div className="mb-10 text-center">
+                  <div className="chat-hero-icon mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
+                    <Sparkles className="h-7 w-7 text-[var(--accent)]" />
                   </div>
-                ) : (
-                  <div className="whitespace-pre-wrap">{message.content}</div>
-                )}
-              </div>
-
-              {message.role === "user" && (
-                <div
-                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
-                  style={{ background: "var(--glass-bg-strong)", color: "var(--text-secondary)" }}
-                >
-                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <h2 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
+                    What can I help you with?
+                  </h2>
+                  <p className="mt-1.5 text-[14px] text-[var(--text-tertiary)]">
+                    Manage emails, calendar, documents &mdash; all from one
+                    place.
+                  </p>
                 </div>
-              )}
-            </div>
-          ))}
 
-          {(isSubmitting || activeJob) && (
-            <div className="flex gap-2 sm:gap-3">
-              <div
-                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
-                style={{ background: "var(--accent-bg)" }}
-              >
-                <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" style={{ color: "var(--accent-light)" }} />
-              </div>
-              <div
-                className="animate-pulse rounded-2xl px-4 py-3 text-sm"
-                style={{
-                  background: "var(--surface-card)",
-                  border: "1px solid var(--glass-border)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                <span className="font-medium" style={{ color: "var(--text-primary)" }}>
-                  {isSubmitting
-                    ? "Processing..."
-                    : activeJob?.status === "running"
-                    ? "Agent is thinking..."
-                    : "Processing..."}
-                </span>
-                {typeof activeJob?.progress === "number" && (
-                  <span className="ml-1" style={{ color: "var(--text-tertiary)" }}>
-                    ({activeJob.progress}%)
-                  </span>
-                )}
-                {activeJob?.progressMessage && (
-                  <span className="ml-1" style={{ color: "var(--text-ghost)" }}>
-                    - {activeJob.progressMessage}
-                  </span>
-                )}
+                {/* Quick actions grid */}
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {QUICK_ACTIONS.map((action, idx) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={action.label}
+                        onClick={() => void handleSend(action.prompt, true)}
+                        disabled={isSubmitting}
+                        className="chat-action-card group animate-slide-up rounded-xl p-4 text-left transition-all duration-200 disabled:opacity-40"
+                        style={{ animationDelay: `${idx * 60}ms` }}
+                      >
+                        <div
+                          className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110"
+                          style={{
+                            background: action.colorBg,
+                            color: action.color,
+                          }}
+                        >
+                          <Icon className="h-[18px] w-[18px]" />
+                        </div>
+                        <p className="text-[13px] font-semibold text-[var(--text-primary)]">
+                          {action.label}
+                        </p>
+                        <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--text-tertiary)]">
+                          {action.description}
+                        </p>
+                        <ChevronRight className="mt-2 h-3.5 w-3.5 text-[var(--text-ghost)] transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--text-tertiary)]" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Pending approval cards */}
-          {pendingApprovals &&
-            pendingApprovals.length > 0 &&
-            pendingApprovals.map((approval: any) => (
-              <div key={approval._id} className="flex gap-2 sm:gap-3">
-                <div
-                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xl sm:h-7 sm:w-7"
-                  style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </div>
-                <div
-                  className="max-w-[85%] rounded-2xl px-4 py-3 sm:max-w-[80%]"
-                  style={{
-                    background: "rgba(251, 191, 36, 0.04)",
-                    border: "1px solid rgba(251, 191, 36, 0.15)",
-                  }}
-                >
-                  <p
-                    className="text-[11px] font-semibold uppercase tracking-widest"
-                    style={{ color: "var(--warning)" }}
+          ) : (
+            /* ─── Message feed ─── */
+            <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6">
+              <div className="space-y-5">
+                {timeline.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`animate-fade-in ${
+                      message.role === "user"
+                        ? "flex justify-end"
+                        : ""
+                    }`}
                   >
-                    Approval Required
-                  </p>
-                  <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-                    {approval.description}
-                  </p>
-                  {approval.details && (
-                    <div
-                      className="mt-2 rounded-xl p-2.5 text-xs"
-                      style={{
-                        background: "var(--glass-bg)",
-                        color: "var(--text-tertiary)",
-                      }}
-                    >
-                      {approval.details.to && (
-                        <p>
-                          <span style={{ color: "var(--text-secondary)" }}>To:</span>{" "}
-                          {approval.details.to}
+                    {message.role === "user" ? (
+                      /* ── User message ── */
+                      <div className="max-w-[85%] sm:max-w-[75%]">
+                        <div className="chat-user-bubble rounded-2xl rounded-br-md px-4 py-2.5">
+                          <div className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-white">
+                            {message.content}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-right text-[11px] text-[var(--text-ghost)]">
+                          {formatMessageTime(message.timestamp)}
                         </p>
-                      )}
-                      {approval.details.subject && (
-                        <p>
-                          <span style={{ color: "var(--text-secondary)" }}>Subject:</span>{" "}
-                          {approval.details.subject}
+                      </div>
+                    ) : message.role === "system" ? (
+                      /* ── System message ── */
+                      <div className="flex items-center gap-2 py-1">
+                        <div className="h-px flex-1 bg-[var(--border)]" />
+                        <span className="chat-system-badge rounded-full px-3 py-1 text-[11px] font-medium">
+                          {message.content}
+                        </span>
+                        <div className="h-px flex-1 bg-[var(--border)]" />
+                      </div>
+                    ) : (
+                      /* ── Assistant message ── */
+                      <div className="max-w-[95%] sm:max-w-[88%]">
+                        <div className="chat-assistant-bubble rounded-2xl rounded-bl-md px-5 py-4">
+                          <div className={mdClasses}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.content}
+                            </ReactMarkdown>
+
+                            {/* Retry button for failed jobs */}
+                            {message.id.startsWith("job-status-") &&
+                              (() => {
+                                const jobId = message.id.replace(
+                                  "job-status-",
+                                  ""
+                                );
+                                const job = jobs?.find(
+                                  (j) => j._id === jobId
+                                );
+                                if (job?.status !== "failed") return null;
+                                return (
+                                  <button
+                                    onClick={() => void handleRetry(jobId)}
+                                    disabled={isSubmitting}
+                                    className="mt-3 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 disabled:opacity-50"
+                                    style={{
+                                      background: "var(--error-bg)",
+                                      color: "var(--error)",
+                                      border:
+                                        "1px solid rgba(239, 68, 68, 0.15)",
+                                    }}
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                    Retry
+                                  </button>
+                                );
+                              })()}
+                          </div>
+                        </div>
+                        <p className="mt-1 text-[11px] text-[var(--text-ghost)]">
+                          {formatMessageTime(message.timestamp)}
                         </p>
-                      )}
-                      {approval.details.body && (
-                        <p className="mt-1 line-clamp-3">
-                          {typeof approval.details.body === "string"
-                            ? approval.details.body
-                            : approval.details.body?.content?.substring(0, 200)}
-                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Thinking indicator */}
+                {(isSubmitting || activeJob) && (
+                  <div className="animate-fade-in">
+                    <div className="chat-thinking-bubble inline-flex items-center gap-3 rounded-2xl rounded-bl-md px-5 py-3.5">
+                      <div className="chat-thinking-dots flex gap-1">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                      <span className="text-[13px] font-medium text-[var(--text-secondary)]">
+                        {isSubmitting
+                          ? "Processing"
+                          : activeJob?.status === "running"
+                          ? "Thinking"
+                          : "Queued"}
+                      </span>
+                      {typeof activeJob?.progress === "number" && (
+                        <span className="chat-progress-pill rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums">
+                          {activeJob.progress}%
+                        </span>
                       )}
                     </div>
-                  )}
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={async () => {
-                        try {
-                          await approveAction({ approvalId: approval._id });
-                        } catch (err) {
-                          console.error("Approve failed:", err);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200"
-                      style={{
-                        background: "var(--success)",
-                        boxShadow: "0 2px 8px rgba(52, 211, 153, 0.2)",
-                      }}
-                    >
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Approve
-                    </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await rejectAction({ approvalId: approval._id });
-                        } catch (err) {
-                          console.error("Reject failed:", err);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-all duration-200"
-                      style={{
-                        background: "var(--error)",
-                        boxShadow: "0 2px 8px rgba(251, 113, 133, 0.2)",
-                      }}
-                    >
-                      <ShieldX className="h-3.5 w-3.5" />
-                      Reject
-                    </button>
+                    {activeJob?.progressMessage && (
+                      <p className="mt-1.5 text-[12px] italic text-[var(--text-ghost)]">
+                        {activeJob.progressMessage}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
+                )}
 
-          <div ref={messagesEndRef} />
+                {/* Pending approval cards */}
+                {pendingApprovals?.map((approval: any) => (
+                  <div key={approval._id} className="animate-slide-up">
+                    <div className="chat-approval-card overflow-hidden rounded-2xl">
+                      <div className="chat-approval-header flex items-center gap-2 px-5 py-2.5">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.06em]">
+                          Approval Required
+                        </span>
+                      </div>
+                      <div className="px-5 py-4">
+                        <p className="text-[13.5px] font-medium text-[var(--text-primary)]">
+                          {approval.description}
+                        </p>
+                        {approval.details && (
+                          <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg-muted)] p-3 text-[12px]">
+                            {approval.details.to && (
+                              <p className="text-[var(--text-secondary)]">
+                                <span className="font-medium text-[var(--text-primary)]">
+                                  To:
+                                </span>{" "}
+                                {approval.details.to}
+                              </p>
+                            )}
+                            {approval.details.subject && (
+                              <p className="mt-1 text-[var(--text-secondary)]">
+                                <span className="font-medium text-[var(--text-primary)]">
+                                  Subject:
+                                </span>{" "}
+                                {approval.details.subject}
+                              </p>
+                            )}
+                            {approval.details.body && (
+                              <p className="mt-1.5 line-clamp-3 text-[var(--text-tertiary)]">
+                                {typeof approval.details.body === "string"
+                                  ? approval.details.body
+                                  : approval.details.body?.content?.substring(
+                                      0,
+                                      200
+                                    )}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        <div className="mt-4 flex gap-2.5">
+                          <button
+                            onClick={async () => {
+                              try {
+                                await approveAction({
+                                  approvalId: approval._id,
+                                });
+                              } catch (err) {
+                                console.error("Approve failed:", err);
+                              }
+                            }}
+                            className="chat-approve-btn flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12px] font-semibold text-white transition-all duration-150"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await rejectAction({
+                                  approvalId: approval._id,
+                                });
+                              } catch (err) {
+                                console.error("Reject failed:", err);
+                              }
+                            }}
+                            className="chat-reject-btn flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-150"
+                          >
+                            <ShieldX className="h-3.5 w-3.5" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Input area */}
-        <div className="px-3 py-3 sm:px-4 sm:py-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
-          <div className="mx-auto flex max-w-3xl gap-2.5">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleSend();
-                }
-              }}
-              placeholder="Ask about emails, calendar, or request a briefing..."
-              disabled={isSubmitting}
-              className="focus-ring flex-1 rounded-2xl px-4 py-2.5 text-sm transition-all duration-200 disabled:opacity-40 sm:py-3"
-              style={{
-                background: "var(--glass-bg)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "var(--accent)";
-                e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-glow)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "var(--glass-border)";
-                e.currentTarget.style.boxShadow = "";
-              }}
-            />
-            <button
-              onClick={() => void handleSend()}
-              disabled={isSubmitting || !input.trim()}
-              className="rounded-2xl p-2.5 text-white transition-all duration-200 disabled:opacity-30 sm:p-3"
-              style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                boxShadow: "0 2px 8px var(--accent-glow)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isSubmitting && input.trim()) {
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(99, 102, 241, 0.3)";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 2px 8px var(--accent-glow)";
-                e.currentTarget.style.transform = "";
-              }}
-            >
-              <Send className="h-4 w-4" />
-            </button>
+        {/* ─── Composer ─── */}
+        <div className="chat-composer-wrap px-4 pb-4 pt-2 sm:px-5">
+          <div className="chat-composer mx-auto max-w-3xl rounded-2xl">
+            <div className="flex items-end gap-2 p-2.5">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about emails, calendar, or request a briefing..."
+                disabled={isSubmitting}
+                rows={1}
+                className="chat-textarea flex-1 resize-none bg-transparent px-3 py-2 text-[14px] leading-relaxed text-[var(--text-primary)] outline-none placeholder:text-[var(--text-ghost)] disabled:opacity-40"
+              />
+              <button
+                onClick={() => void handleSend()}
+                disabled={isSubmitting || !input.trim()}
+                className="chat-send-btn flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all duration-200 disabled:opacity-25"
+              >
+                <ArrowUp className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+
+            {/* Composer footer hints */}
+            {!isEmpty && (
+              <div className="flex items-center justify-between border-t border-[var(--border)]/50 px-4 py-1.5">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+                  {QUICK_ACTIONS.slice(0, 3).map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <button
+                        key={action.label}
+                        onClick={() => void handleSend(action.prompt, true)}
+                        disabled={isSubmitting}
+                        className="chat-hint-chip flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all duration-150 disabled:opacity-40"
+                      >
+                        <Icon className="h-3 w-3" />
+                        {action.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="hidden text-[11px] text-[var(--text-ghost)] sm:block">
+                  Enter to send &middot; Shift+Enter for new line
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
