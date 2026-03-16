@@ -29,6 +29,7 @@ export const loginScopes = [
 
 export const graphScopes = [
   "Mail.Read",
+  "Mail.ReadWrite",
   "Mail.Send",
   "Calendars.ReadWrite",
   "Files.ReadWrite",
