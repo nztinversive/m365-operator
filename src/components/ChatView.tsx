@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   ShieldX,
   X,
+  RotateCcw,
 } from "lucide-react";
 
 interface ChatViewProps {
@@ -194,6 +195,35 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeJob, isSubmitting, timeline]);
+
+  const handleRetry = async (jobId: string) => {
+    const failedJob = jobs?.find((j) => j._id === jobId);
+    if (!failedJob || !failedJob.input?.message || !activeConversationId) return;
+
+    const originalMessage = failedJob.input.message as string;
+    setIsSubmitting(true);
+    try {
+      const newJobId = await createJob({
+        userId,
+        conversationId: activeConversationId,
+        type: failedJob.type,
+        input: { message: originalMessage },
+      });
+
+      await addMessage({
+        userId,
+        conversationId: activeConversationId,
+        jobId: newJobId,
+        role: "user",
+        content: originalMessage,
+      });
+    } catch (error) {
+      console.error("Failed to retry job:", error);
+    } finally {
+      setIsSubmitting(false);
+      inputRef.current?.focus();
+    }
+  };
 
   const handleNewConversation = async () => {
     try {
@@ -478,6 +508,21 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {message.content}
                     </ReactMarkdown>
+                    {message.id.startsWith("job-status-") && (() => {
+                      const jobId = message.id.replace("job-status-", "");
+                      const job = jobs?.find((j) => j._id === jobId);
+                      if (job?.status !== "failed") return null;
+                      return (
+                        <button
+                          onClick={() => void handleRetry(jobId)}
+                          disabled={isSubmitting}
+                          className="mt-2 flex items-center gap-1.5 rounded-lg bg-red-600/20 px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-600/40 disabled:opacity-50"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Retry
+                        </button>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div className="whitespace-pre-wrap">{message.content}</div>

@@ -50,12 +50,8 @@ export const getMessages = query({
         .collect();
     }
 
-    // Fallback: messages with no conversationId (legacy)
-    return await ctx.db
-      .query("messages")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .order("asc")
-      .collect();
+    // No conversationId provided — return empty (legacy messages hidden)
+    return [];
   },
 });
 
@@ -123,10 +119,52 @@ export const list = query({
         .collect();
     }
 
-    return await ctx.db
-      .query("messages")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .order("asc")
-      .collect();
+    // No conversationId provided — return empty (legacy messages hidden)
+    return [];
+  },
+});
+
+// One-time migration: assign orphan messages (no conversationId) to a "Legacy" conversation per user
+export const migrateOrphanMessages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Get all messages without a conversationId
+    const allMessages = await ctx.db.query("messages").collect();
+    const orphans = allMessages.filter((m) => m.conversationId === undefined);
+
+    if (orphans.length === 0) {
+      return { migrated: 0, conversations: 0 };
+    }
+
+    // Group by userId
+    const byUser = new Map<string, typeof orphans>();
+    for (const msg of orphans) {
+      const key = msg.userId as string;
+      if (!byUser.has(key)) byUser.set(key, []);
+      byUser.get(key)!.push(msg);
+    }
+
+    let totalMigrated = 0;
+    let totalConversations = 0;
+
+    for (const [userId, messages] of byUser) {
+      // Create a Legacy conversation for this user
+      const now = Date.now();
+      const convId = await ctx.db.insert("conversations", {
+        userId: userId as any,
+        title: "Legacy",
+        createdAt: now,
+        updatedAt: now,
+      });
+      totalConversations++;
+
+      // Patch all orphan messages with the new conversationId
+      for (const msg of messages) {
+        await ctx.db.patch(msg._id, { conversationId: convId });
+        totalMigrated++;
+      }
+    }
+
+    return { migrated: totalMigrated, conversations: totalConversations };
   },
 });
