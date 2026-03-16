@@ -206,7 +206,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
     }
   };
 
-  const handleSend = async (prompt?: string) => {
+  const handleSend = async (prompt?: string, forceNewConversation?: boolean) => {
     const text = (prompt ?? input).trim();
     if (!text || isSubmitting) return;
 
@@ -215,7 +215,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
 
     try {
       let convId = activeConversationId;
-      if (!convId) {
+      if (!convId || forceNewConversation) {
         convId = await createConversation({ userId, title: "New conversation" });
         setActiveConversationId(convId);
       }
@@ -372,7 +372,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
         {/* Quick action buttons — horizontally scrollable on mobile */}
         <div className="flex gap-2 overflow-x-auto border-b border-gray-800/50 px-3 py-2 scrollbar-none sm:px-4">
           <button
-            onClick={() => void handleSend("Summarize my unread emails")}
+            onClick={() => void handleSend("Summarize my unread emails", true)}
             disabled={isSubmitting}
             className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
           >
@@ -381,7 +381,7 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           </button>
 
           <button
-            onClick={() => void handleSend("What's on my calendar today?")}
+            onClick={() => void handleSend("What's on my calendar today?", true)}
             disabled={isSubmitting}
             className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
           >
@@ -392,7 +392,8 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           <button
             onClick={() =>
               void handleSend(
-                "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary."
+                "Give me a full morning briefing: read my unread emails, check today's calendar, and compile everything into a clear summary.",
+                true
               )
             }
             disabled={isSubmitting}
@@ -405,7 +406,8 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           <button
             onClick={() =>
               void handleSend(
-                "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps."
+                "Create a weekly status deck as a PowerPoint presentation. Include: wins this week, blockers, key metrics, and next steps.",
+                true
               )
             }
             disabled={isSubmitting}
@@ -417,7 +419,8 @@ export function ChatView({ account, onLogout, userId }: ChatViewProps) {
           <button
             onClick={() =>
               void handleSend(
-                "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status."
+                "Create an Excel tracker with my action items from recent emails. Include columns for task, owner, deadline, and status.",
+                true
               )
             }
             disabled={isSubmitting}
