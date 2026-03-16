@@ -155,6 +155,38 @@ export const getJobs = query({
   },
 });
 
+export const getJobsPaginated = query({
+  args: {
+    userId: v.id("users"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 25;
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = jobs.length > limit;
+    const page = hasMore ? jobs.slice(0, limit) : jobs;
+
+    // Enrich with conversation titles
+    const enriched = await Promise.all(
+      page.map(async (job) => {
+        let conversationTitle: string | undefined;
+        if (job.conversationId) {
+          const conv = await ctx.db.get(job.conversationId);
+          conversationTitle = conv?.title;
+        }
+        return { ...job, conversationTitle };
+      })
+    );
+
+    return { jobs: enriched, hasMore };
+  },
+});
+
 export const getJob = query({
   args: { id: v.id("jobs") },
   handler: async (ctx, args) => {
