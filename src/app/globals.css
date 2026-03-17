@@ -388,3 +388,105 @@ body {
   color: var(--text-secondary);
   background: var(--bg-muted);
 }
+
+/* ── 1. Enhanced thinking card ── */
+.chat-thinking-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-progress-track {
+  background: var(--bg-muted);
+}
+
+.chat-progress-fill {
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+}
+
+/* ── 2. Rich content cards ── */
+.chat-rich-card {
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+}
+.chat-rich-card:hover {
+  border-color: var(--border-hover);
+}
+
+/* ── 3. File attachment cards ── */
+.chat-file-card {
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+}
+.chat-file-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-file-download {
+  color: var(--text-ghost);
+  background: transparent;
+}
+.chat-file-download:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* ── 4. Search box ── */
+.chat-search-box {
+  background: var(--bg-muted);
+  border: 1px solid transparent;
+}
+.chat-search-focused {
+  background: var(--bg-surface);
+  border-color: var(--accent-ring);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.06);
+}
+
+/* ── 5. Message hover actions ── */
+.chat-msg-wrap { position: relative; }
+
+.chat-msg-actions {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.chat-msg-action-btn {
+  color: var(--text-ghost);
+  transition: all 0.12s ease;
+}
+.chat-msg-action-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-muted);
+}
+
+/* ── 7. Pin button ── */
+.chat-pin-btn {
+  color: var(--text-ghost);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.chat-pin-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-ring);
+}
+
+/* ── 8. Keyboard shortcut hints ── */
+.chat-kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 4px;
+  margin-right: 4px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 var(--border);
+}

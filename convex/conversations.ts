@@ -40,3 +40,12 @@ export const updateTitle = mutation({
     });
   },
 });
+
+export const togglePinned = mutation({
+  args: { id: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const conv = await ctx.db.get(args.id);
+    if (!conv) throw new Error("Conversation not found");
+    await ctx.db.patch(args.id, { pinned: !conv.pinned });
+  },
+});

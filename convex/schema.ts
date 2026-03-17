@@ -33,6 +33,7 @@ export default defineSchema({
   conversations: defineTable({
     userId: v.id("users"),
     title: v.string(),
+    pinned: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
