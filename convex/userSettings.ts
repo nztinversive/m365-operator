@@ -41,29 +41,35 @@ export const updateSettings = mutation({
     const existing = await findUserSettings(ctx, args.userId);
     const now = Date.now();
 
-    const claudeMaxToken = args.claudeMaxToken?.trim();
-    const claudeApiKey = args.claudeApiKey?.trim();
     const claudeModel = args.claudeModel?.trim() || DEFAULT_CLAUDE_MODEL;
 
-    const nextSettings = {
-      userId: args.userId,
+    // Build patch with only explicitly provided fields.
+    // Empty string → undefined (clears the field); undefined → omitted (keeps existing value).
+    const patch: Record<string, unknown> = {
       aiProvider: args.aiProvider,
       claudeModel,
       updatedAt: now,
-      ...(claudeMaxToken ? { claudeMaxToken } : {}),
-      ...(claudeApiKey ? { claudeApiKey } : {}),
     };
 
+    if (args.claudeMaxToken !== undefined) {
+      const trimmed = args.claudeMaxToken.trim();
+      patch.claudeMaxToken = trimmed === "" ? undefined : trimmed;
+    }
+    if (args.claudeApiKey !== undefined) {
+      const trimmed = args.claudeApiKey.trim();
+      patch.claudeApiKey = trimmed === "" ? undefined : trimmed;
+    }
+
     if (existing) {
-      await ctx.db.replace(existing._id, nextSettings);
+      await ctx.db.patch(existing._id, patch);
     } else {
-      await ctx.db.insert("userSettings", nextSettings);
+      await ctx.db.insert("userSettings", { userId: args.userId, ...patch } as any);
     }
 
     return {
       aiProvider: args.aiProvider,
-      claudeMaxToken,
-      claudeApiKey,
+      claudeMaxToken: patch.claudeMaxToken as string | undefined,
+      claudeApiKey: patch.claudeApiKey as string | undefined,
       claudeModel,
       updatedAt: now,
     };
