@@ -3,7 +3,8 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { AccountInfo } from "@azure/msal-browser";
+import { AccountInfo, AuthenticationResult } from "@azure/msal-browser";
+import { useMsal } from "@azure/msal-react";
 import { useEffect, useState } from "react";
 import { allScopes } from "@/lib/msal-config";
 import {
@@ -43,7 +44,36 @@ const CLAUDE_MODEL_OPTIONS = [
 
 const DEFAULT_CLAUDE_MODEL = "claude-opus-4-6";
 
+// Try to extract refresh token from MSAL's internal cache (localStorage)
+function extractRefreshTokenFromCache(): string | undefined {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes("refreshtoken")) {
+        const value = localStorage.getItem(key);
+        if (value) {
+          const parsed = JSON.parse(value);
+          if (parsed.secret) {
+            return parsed.secret;
+          }
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+function extractRefreshToken(result: AuthenticationResult): string | undefined {
+  const refreshToken = (result as AuthenticationResult & { refreshToken?: unknown }).refreshToken;
+  return typeof refreshToken === "string" && refreshToken.length > 0
+    ? refreshToken
+    : undefined;
+}
+
 export function SettingsPage({ userId, account }: SettingsPageProps) {
+  const { instance } = useMsal();
   const user = useQuery(api.users.getByEmail, { email: account.username! });
   const msConnection = useQuery(api.microsoftConnections.getConnection, { userId });
   const isTokenExpired = useQuery(api.microsoftConnections.isTokenExpired, { userId });
@@ -51,8 +81,14 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
 
   const removeConnection = useMutation(api.microsoftConnections.remove);
   const updateAiSettings = useMutation(api.userSettings.updateSettings);
+  const upsertConnection = useMutation(api.microsoftConnections.upsertConnection);
 
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [aiProvider, setAiProvider] = useState<AIProvider>("claude_max");
   const [claudeMaxToken, setClaudeMaxToken] = useState("");
   const [claudeApiKey, setClaudeApiKey] = useState("");
@@ -86,6 +122,52 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
       alert("Failed to disconnect Microsoft account. Please try again.");
     } finally {
       setIsDisconnecting(false);
+    }
+  };
+
+  const handleRefreshConnection = async () => {
+    setRefreshMessage(null);
+    setIsRefreshing(true);
+    try {
+      // 1. Try silent token refresh first
+      const tokenResult = await instance.acquireTokenSilent({
+        account,
+        scopes: allScopes,
+        forceRefresh: true,
+      });
+
+      const refreshToken = extractRefreshToken(tokenResult) || extractRefreshTokenFromCache();
+
+      await upsertConnection({
+        userId,
+        accessToken: tokenResult.accessToken,
+        refreshToken,
+        expiresAt: tokenResult.expiresOn?.getTime() ?? Date.now() + 60 * 60 * 1000,
+        email: account.username!,
+        displayName: account.name || account.username!,
+      });
+
+      setRefreshMessage({ type: "success", text: "Connection refreshed successfully." });
+    } catch (silentError) {
+      console.warn("[Settings] Silent token refresh failed, falling back to redirect:", silentError);
+      try {
+        // 2. Fall back to redirect (not popup — popup has MSAL v5 cross-window issues)
+        await instance.acquireTokenRedirect({
+          account,
+          scopes: allScopes,
+        });
+        // Page will redirect — no code runs after this
+      } catch (redirectError) {
+        console.error("[Settings] Redirect token refresh failed:", redirectError);
+        setRefreshMessage({
+          type: "error",
+          text: redirectError instanceof Error
+            ? redirectError.message
+            : "Failed to refresh connection. Please sign out and sign back in.",
+        });
+      }
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -331,14 +413,17 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
             <div className="flex space-x-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               {isTokenExpired && (
                 <button
-                  onClick={() => {
-                    alert("Please sign out and sign back in to refresh your connection.");
-                  }}
-                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150"
+                  onClick={() => void handleRefreshConnection()}
+                  disabled={isRefreshing}
+                  className="flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:opacity-50"
                   style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  <span>Refresh Connection</span>
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  <span>{isRefreshing ? "Refreshing..." : "Refresh Connection"}</span>
                 </button>
               )}
               <button
@@ -351,6 +436,18 @@ export function SettingsPage({ userId, account }: SettingsPageProps) {
                 <span>{isDisconnecting ? "Disconnecting..." : "Disconnect"}</span>
               </button>
             </div>
+
+            {refreshMessage && (
+              <div
+                className="rounded-lg px-3 py-2 text-sm font-medium"
+                style={{
+                  background: refreshMessage.type === "success" ? "var(--success-bg)" : "var(--error-bg)",
+                  color: refreshMessage.type === "success" ? "var(--success)" : "var(--error)",
+                }}
+              >
+                {refreshMessage.text}
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-6 text-center">
