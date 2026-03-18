@@ -2,6 +2,7 @@ import { ConvexHttpClient } from 'convex/browser';
 import type { FunctionReference } from 'convex/server';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { api } from '../../convex/_generated/api.js';
+import { allScopesString } from '../../shared/scopes.js';
 
 export interface GraphClientConfig {
   clientId: string;
@@ -97,10 +98,7 @@ export class GraphClientManager {
       params.append('client_secret', this.config.clientSecret);
       params.append('grant_type', 'refresh_token');
       params.append('refresh_token', tokenInfo.refreshToken);
-      params.append(
-        'scope',
-        'offline_access openid profile User.Read Mail.Read Mail.Send Calendars.ReadWrite Files.ReadWrite'
-      );
+      params.append('scope', allScopesString);
 
       const response = await fetch(tokenEndpoint, {
         method: 'POST',

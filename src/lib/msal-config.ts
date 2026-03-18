@@ -1,4 +1,6 @@
 import { Configuration, LogLevel } from "@azure/msal-browser";
+// Single source of truth for Graph scopes — shared with the worker.
+export { loginScopes, graphScopes, allScopes } from "../../shared/scopes";
 
 export const msalConfig: Configuration = {
   auth: {
@@ -18,27 +20,3 @@ export const msalConfig: Configuration = {
     },
   },
 };
-
-// Scopes needed for V1
-export const loginScopes = [
-  "openid",
-  "profile",
-  "offline_access",
-  "User.Read",
-];
-
-export const graphScopes = [
-  "Mail.Read",
-  "Mail.ReadWrite",
-  "Mail.Send",
-  "Calendars.ReadWrite",
-  "Files.ReadWrite",
-  "Team.ReadBasic.All",
-  "Channel.ReadBasic.All",
-  "ChannelMessage.Read.All",
-  "ChannelMessage.Send",
-  "Chat.Read",
-  "ChatMessage.Send",
-];
-
-export const allScopes = [...loginScopes, ...graphScopes];
