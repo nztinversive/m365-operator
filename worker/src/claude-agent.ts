@@ -664,6 +664,7 @@ export interface AgentRunOptions {
   onProgress?: (message: string) => void;
   onToolCall?: (toolName: string, input: any) => void;
   onApprovalNeeded?: (toolName: string, input: any) => Promise<boolean>;
+  onStreamingText?: (text: string, isFinal: boolean) => void;
   maxTurns?: number;
 }
 
@@ -819,14 +820,52 @@ export async function runAgent(
   for (let turn = 0; turn < maxTurns; turn++) {
     options.onProgress?.(`Agent thinking... (turn ${turn + 1}/${maxTurns})`);
 
-    // Call Claude with tools
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: 8192,
-      system: SYSTEM_PROMPT,
-      tools: M365_TOOLS,
-      messages,
-    });
+    // Call Claude with streaming for real-time progress
+    let streamedText = '';
+    let lastSentLength = 0;
+    let lastProgressTime = Date.now();
+    const BATCH_CHARS = 500;
+    const BATCH_MS = 2000;
+
+    let response: Anthropic.Message;
+    try {
+      const stream = anthropic.messages.stream({
+        model,
+        max_tokens: 8192,
+        system: SYSTEM_PROMPT,
+        tools: M365_TOOLS,
+        messages,
+      });
+
+      // Stream text chunks with batching
+      stream.on('text', (textDelta) => {
+        streamedText += textDelta;
+        const now = Date.now();
+        if (
+          options.onStreamingText &&
+          (streamedText.length - lastSentLength >= BATCH_CHARS || now - lastProgressTime >= BATCH_MS)
+        ) {
+          options.onStreamingText(streamedText, false);
+          lastSentLength = streamedText.length;
+          lastProgressTime = now;
+        }
+      });
+
+      response = await stream.finalMessage();
+
+      // Send any remaining unbatched text
+      if (streamedText && streamedText.length > lastSentLength) {
+        options.onStreamingText?.(streamedText, response.stop_reason === 'end_turn');
+      }
+    } catch (streamError) {
+      // Stream failed mid-way — save whatever we have as partial response
+      if (streamedText.length > 0) {
+        console.error('⚠️ Stream failed mid-way, saving partial response:', streamError);
+        finalResponse = streamedText + '\n\n*[Response interrupted due to an error]*';
+        options.onStreamingText?.(finalResponse, true);
+      }
+      throw streamError; // Re-throw so the job is marked as failed
+    }
 
     // Check if Claude is done (no more tool calls)
     if (response.stop_reason === 'end_turn') {

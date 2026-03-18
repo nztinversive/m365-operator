@@ -269,7 +269,7 @@ export class JobProcessor {
       const expectedTools = 5; // reasonable default; progress caps at 90% to leave room for completion
       let toolCallCount = 0;
 
-      // Run the Claude agent with tools
+      // Run the Claude agent with tools (streaming enabled)
       const result = await runAgent(anthropicApiKey, {
         task,
         conversationHistory,
@@ -277,6 +277,16 @@ export class JobProcessor {
         model,
         onProgress: (msg) => {
           this.updateJobProgress(job._id, msg);
+        },
+        onStreamingText: (text, isFinal) => {
+          if (!isFinal) {
+            // Prefix with "streaming:" so the frontend can detect and render as live text
+            this.updateJobStatus(
+              job._id, 'running', undefined, undefined, undefined,
+              `streaming:${text}`
+            );
+          }
+          // Final text is saved as a normal assistant message after the agent completes
         },
         onToolCall: (name, input) => {
           toolCallCount++;

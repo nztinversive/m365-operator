@@ -351,7 +351,13 @@ function ThinkingIndicator({
   progress?: number;
   progressMessage?: string;
 }) {
+  // Detect streaming text (prefixed with "streaming:")
+  const isStreaming = progressMessage?.startsWith("streaming:");
+  const streamingText = isStreaming ? progressMessage!.slice("streaming:".length) : null;
+
   const steps = useMemo(() => {
+    if (isStreaming) return []; // Don't show steps during streaming
+
     const s: { label: string; status: "done" | "active" | "pending" }[] = [];
 
     if (status === "queued" || status === "submitting") {
@@ -386,7 +392,21 @@ function ThinkingIndicator({
     }
 
     return s;
-  }, [status, jobType, progressMessage]);
+  }, [status, jobType, progressMessage, isStreaming]);
+
+  // Streaming text mode — show the response as it's being generated
+  if (isStreaming && streamingText) {
+    return (
+      <div className="animate-fade-in max-w-[95%] sm:max-w-[88%]">
+        <div className="chat-assistant-bubble rounded-2xl rounded-bl-md px-5 py-4">
+          <div className={mdClasses}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingText}</ReactMarkdown>
+            <span className="inline-block h-4 w-0.5 animate-pulse bg-[var(--accent)] align-text-bottom ml-0.5" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
