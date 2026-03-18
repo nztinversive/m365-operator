@@ -180,6 +180,24 @@ export class JobProcessor {
       const approvedResume = await this.tryResumeFromApproval(job);
       if (approvedResume) return;
 
+      // Guard: if this job has ANY approvals (approved, pending, or denied),
+      // it was previously in the approval flow. Never fall through to the
+      // full agent loop — that would re-run the entire Claude conversation.
+      const existingApprovals = await this.convex.query(this.getApprovalsByJobRef, {
+        jobId: job._id,
+      }) as Array<{ status: string }> | null;
+      if (existingApprovals && existingApprovals.length > 0) {
+        const statuses = existingApprovals.map(a => a.status);
+        console.error(
+          `🚫 Job ${job._id} has approvals (${statuses.join(', ')}) but none triggered resume. ` +
+          `Refusing to run full agent loop to prevent duplicate actions.`
+        );
+        throw new Error(
+          `Job was re-queued from approval flow but no approved actions found (statuses: ${statuses.join(', ')}). ` +
+          `Refusing to re-run full agent loop to prevent duplicate actions.`
+        );
+      }
+
       const activeAiConfig = await this.convex.query(this.getActiveApiKeyRef, {
         userId: job.userId,
       }) as {
@@ -489,8 +507,13 @@ export class JobProcessor {
 
       return true;
     } catch (error) {
-      console.error(`❌ Approval resume failed for job ${job._id}, falling back to agent loop:`, error);
-      return false;
+      console.error(`❌ Approval resume failed for job ${job._id}:`, error);
+      // NEVER fall through to the full agent loop — that would re-run the
+      // entire Claude conversation, risking duplicate emails/posts and
+      // wasting API credits. Throw so the job fails cleanly.
+      throw new Error(
+        `Approval resume failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
