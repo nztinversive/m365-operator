@@ -6,7 +6,8 @@ const jobStatus = v.union(
   v.literal("running"),
   v.literal("waiting_approval"),
   v.literal("completed"),
-  v.literal("failed")
+  v.literal("failed"),
+  v.literal("cancelled")
 );
 
 export const createJob = mutation({
@@ -72,7 +73,7 @@ export const updateJobStatus = mutation({
       updatedAt: now,
     };
 
-    if (args.status === "completed" || args.status === "failed") {
+    if (args.status === "completed" || args.status === "failed" || args.status === "cancelled") {
       patchData.completedAt = now;
     }
 
@@ -265,7 +266,7 @@ export const updateStatus = mutation({
       updatedAt: now,
     };
 
-    if (args.status === "completed" || args.status === "failed") {
+    if (args.status === "completed" || args.status === "failed" || args.status === "cancelled") {
       patchData.completedAt = now;
     }
 

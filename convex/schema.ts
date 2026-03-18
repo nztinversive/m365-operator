@@ -59,7 +59,8 @@ export default defineSchema({
       v.literal("running"),
       v.literal("waiting_approval"),
       v.literal("completed"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("cancelled")
     ),
     input: v.optional(v.any()),
     output: v.optional(v.any()),
