@@ -5,7 +5,7 @@ import { join } from 'path';
 import { api } from '../../convex/_generated/api.js';
 import type { Id } from '../../convex/_generated/dataModel';
 import { GraphClientManager } from './graph-client-manager.js';
-import { runAgent, ToolExecutor, type AgentRunResult } from './claude-agent.js';
+import { runAgent, ToolExecutor, normalizeExcelInput, type AgentRunResult } from './claude-agent.js';
 import {
   generateWordDocument,
   generateExcelWorkbook,
@@ -471,6 +471,14 @@ export class JobProcessor {
         console.log(`  🔧 Executing approved: ${toolName}(${JSON.stringify(toolInput).substring(0, 100)}...)`);
         await this.updateJobProgress(job._id, `Executing approved action: ${toolName}`);
 
+        // upload_file requires document generation + upload (not in ToolExecutor)
+        if (toolName === 'upload_file') {
+          const result = await this.executeUploadFile(graphClient, toolInput);
+          toolsUsed.push({ name: toolName, input: toolInput });
+          results.push(`**${toolName}**: ${result}`);
+          continue;
+        }
+
         const result = await toolExecutor.execute(toolName, toolInput);
         toolsUsed.push({ name: toolName, input: toolInput });
         results.push(`**${toolName}**: ${result}`);
@@ -597,6 +605,52 @@ export class JobProcessor {
     }
   }
 
+  /**
+   * Execute an approved upload_file action: generate the document and PUT to OneDrive.
+   * Used by tryResumeFromApproval since upload_file is not handled by ToolExecutor.
+   */
+  private async executeUploadFile(graphClient: import('@microsoft/microsoft-graph-client').Client, input: Record<string, any>): Promise<string> {
+    const fileName = input.file_name || input.title || 'document';
+    const fileType = input.file_type || 'word';
+    const folder = input.folder || 'M365 Operator';
+    const content = input.content || {};
+
+    // Ensure correct extension
+    const extMap: Record<string, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' };
+    let uploadName = input._uploadName || fileName;
+    const ext = extMap[fileType];
+    if (ext && !uploadName.endsWith(ext)) {
+      uploadName = uploadName.replace(/\.\w+$/, '') + ext;
+    }
+
+    // Generate the document buffer
+    let docBuffer: Buffer;
+    if (fileType === 'word') {
+      docBuffer = await generateWordDocument(content.title || fileName, content.sections || []);
+    } else if (fileType === 'excel') {
+      const worksheets = normalizeExcelInput(content, fileName);
+      docBuffer = await generateExcelWorkbook(worksheets);
+    } else if (fileType === 'powerpoint') {
+      docBuffer = await generatePowerPointPresentation(content.title || fileName, content.slides || []);
+    } else {
+      throw new Error(`Unsupported file type: ${fileType}`);
+    }
+
+    // Upload to OneDrive (overwrite approved)
+    const uploadResult = await graphClient
+      .api(`/me/drive/root:/${folder}/${uploadName}:/content`)
+      .put(docBuffer);
+
+    return JSON.stringify({
+      status: 'uploaded',
+      name: uploadResult.name,
+      webUrl: uploadResult.webUrl,
+      id: uploadResult.id,
+      folder,
+      overwrite: true,
+    });
+  }
+
   private async requestApproval(
     jobId: string,
     userId: string,
@@ -604,9 +658,19 @@ export class JobProcessor {
     details: any
   ): Promise<void> {
     try {
+      // Build a human-readable description
+      let description: string;
+      if (action === 'upload_file' && details?._existingFile) {
+        const ef = details._existingFile;
+        const sizeKB = Math.round((ef.size || 0) / 1024);
+        description = `Overwrite existing file "${ef.name}" (${sizeKB} KB, last modified ${ef.lastModified}) in ${details.folder || 'M365 Operator'}`;
+      } else {
+        description = `Approve: ${action} — ${JSON.stringify(details).substring(0, 200)}`;
+      }
+
       await this.convex.mutation(this.createApprovalRef, {
         jobId, userId, action,
-        description: `Approve: ${action} — ${JSON.stringify(details).substring(0, 200)}`,
+        description,
         details,
       });
     } catch (err) {

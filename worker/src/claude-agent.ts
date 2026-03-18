@@ -693,7 +693,7 @@ You are helpful, efficient, and proactive. Complete the user's task fully — do
 // Normalize whatever Claude sends for Excel into the expected ExcelWorksheetData[] format.
 // Claude might send: { worksheets: [...] }, { headers: [...], rows: [...] }, { data: [...] },
 // { columns: [...], items: [...] }, or any other creative format.
-function normalizeExcelInput(content: Record<string, any>, fallbackName: string): Array<{
+export function normalizeExcelInput(content: Record<string, any>, fallbackName: string): Array<{
   name: string;
   headers: string[];
   rows: (string | number | boolean | Date)[][];
@@ -897,13 +897,64 @@ export async function runAgent(
           continue;
         }
 
-        // Handle upload_file: generate document and upload to OneDrive immediately
+        // Handle upload_file: generate document and upload to OneDrive
+        // If the file already exists, require approval before overwriting.
         if (toolName === 'upload_file') {
           try {
             const fileName = toolInput.file_name || toolInput.title || 'document';
             const fileType = toolInput.file_type || 'word';
             const folder = toolInput.folder || 'M365 Operator';
             const content = toolInput.content || {};
+
+            // Ensure correct extension
+            const extMap: Record<string, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' };
+            let uploadName = fileName;
+            const ext = extMap[fileType];
+            if (ext && !uploadName.endsWith(ext)) {
+              uploadName = uploadName.replace(/\.\w+$/, '') + ext;
+            }
+
+            // ── Check if the file already exists (overwrite guard) ──
+            let existingFile: { name: string; size: number; lastModifiedDateTime: string } | null = null;
+            try {
+              const fileMeta = await options.graphClient
+                .api(`/me/drive/root:/${folder}/${uploadName}`)
+                .select('name,size,lastModifiedDateTime')
+                .get();
+              existingFile = fileMeta;
+            } catch (checkErr: any) {
+              // 404 means file doesn't exist — that's fine, upload without approval
+              if (checkErr?.statusCode !== 404) {
+                // Unexpected error checking file existence; log but proceed with upload
+                console.warn(`⚠️ Could not check if file exists at ${folder}/${uploadName}:`, checkErr?.message);
+              }
+            }
+
+            // If file exists, route through approval flow
+            if (existingFile && options.onApprovalNeeded) {
+              const approvalInput = {
+                ...toolInput,
+                _uploadName: uploadName,
+                _existingFile: {
+                  name: existingFile.name,
+                  size: existingFile.size,
+                  lastModified: existingFile.lastModifiedDateTime,
+                },
+              };
+              const approved = await options.onApprovalNeeded('upload_file', approvalInput);
+              if (!approved) {
+                approvalsPending.push({ toolName: 'upload_file', input: approvalInput });
+                toolResults.push({
+                  type: 'tool_result',
+                  tool_use_id: block.id,
+                  content: JSON.stringify({
+                    status: 'approval_pending',
+                    message: `File "${uploadName}" already exists in ${folder} (${existingFile.size} bytes, last modified ${existingFile.lastModifiedDateTime}). Overwrite requires user approval. The request has been queued for review.`,
+                  }),
+                });
+                continue;
+              }
+            }
 
             // Generate the document buffer
             let docBuffer: Buffer;
@@ -917,14 +968,6 @@ export async function runAgent(
               docBuffer = await generatePowerPointPresentation(content.title || fileName, content.slides || []);
             } else {
               throw new Error(`Unsupported file type: ${fileType}`);
-            }
-
-            // Ensure correct extension
-            const extMap: Record<string, string> = { word: '.docx', excel: '.xlsx', powerpoint: '.pptx' };
-            let uploadName = fileName;
-            const ext = extMap[fileType];
-            if (ext && !uploadName.endsWith(ext)) {
-              uploadName = uploadName.replace(/\.\w+$/, '') + ext;
             }
 
             // Upload to OneDrive
