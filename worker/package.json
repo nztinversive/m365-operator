@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs');const p=require('path');const src=p.resolve(__dirname,'..','convex','_generated');const dst=p.resolve(__dirname,'dist','convex','_generated');fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(p.join(src,f),p.join(dst,f)));console.log('Copied _generated')\"",
     "start": "node dist/worker/src/index.js"
   },
   "dependencies": {
