@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { verifyUser } from "./lib/auth";
 
 async function approveApproval(ctx: any, approvalId: any) {
   const approval = await ctx.db.get(approvalId);
@@ -83,8 +84,10 @@ export const create = mutation({
     action: v.string(),
     description: v.string(),
     details: v.optional(v.any()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     return await ctx.db.insert("approvals", {
       jobId: args.jobId,
       userId: args.userId,
@@ -100,8 +103,18 @@ export const create = mutation({
 export const approveAction = mutation({
   args: {
     approvalId: v.id("approvals"),
+    userId: v.optional(v.id("users")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Verify the caller owns this approval
+    const approval = await ctx.db.get(args.approvalId);
+    if (!approval) throw new Error("Auth error: approval not found.");
+    const callerId = args.userId ?? approval.userId;
+    await verifyUser(ctx, callerId, args.systemToken);
+    if (callerId !== approval.userId) {
+      throw new Error("Auth error: you do not own this approval.");
+    }
     return await approveApproval(ctx, args.approvalId);
   },
 });
@@ -109,8 +122,18 @@ export const approveAction = mutation({
 export const rejectAction = mutation({
   args: {
     approvalId: v.id("approvals"),
+    userId: v.optional(v.id("users")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Verify the caller owns this approval
+    const approval = await ctx.db.get(args.approvalId);
+    if (!approval) throw new Error("Auth error: approval not found.");
+    const callerId = args.userId ?? approval.userId;
+    await verifyUser(ctx, callerId, args.systemToken);
+    if (callerId !== approval.userId) {
+      throw new Error("Auth error: you do not own this approval.");
+    }
     return await rejectApproval(ctx, args.approvalId);
   },
 });
@@ -174,15 +197,29 @@ export const get = query({
 
 // Compatibility aliases for existing callers.
 export const approve = mutation({
-  args: { id: v.id("approvals") },
+  args: { id: v.id("approvals"), userId: v.optional(v.id("users")), systemToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    const approval = await ctx.db.get(args.id);
+    if (!approval) throw new Error("Auth error: approval not found.");
+    const callerId = args.userId ?? approval.userId;
+    await verifyUser(ctx, callerId, args.systemToken);
+    if (callerId !== approval.userId) {
+      throw new Error("Auth error: you do not own this approval.");
+    }
     return await approveApproval(ctx, args.id);
   },
 });
 
 export const reject = mutation({
-  args: { id: v.id("approvals") },
+  args: { id: v.id("approvals"), userId: v.optional(v.id("users")), systemToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    const approval = await ctx.db.get(args.id);
+    if (!approval) throw new Error("Auth error: approval not found.");
+    const callerId = args.userId ?? approval.userId;
+    await verifyUser(ctx, callerId, args.systemToken);
+    if (callerId !== approval.userId) {
+      throw new Error("Auth error: you do not own this approval.");
+    }
     return await rejectApproval(ctx, args.id);
   },
 });

@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { verifyUser } from "./lib/auth";
 
 const messageRole = v.union(v.literal("user"), v.literal("assistant"), v.literal("system"));
 
@@ -10,8 +11,10 @@ export const addMessage = mutation({
     jobId: v.optional(v.id("jobs")),
     role: messageRole,
     content: v.string(),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     return await ctx.db.insert("messages", {
       userId: args.userId,
       conversationId: args.conversationId,
@@ -28,8 +31,10 @@ export const getMessages = query({
     userId: v.id("users"),
     conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     if (args.jobId) {
       return await ctx.db
         .query("messages")
@@ -79,8 +84,10 @@ export const send = mutation({
     jobId: v.optional(v.id("jobs")),
     role: messageRole,
     content: v.string(),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     return await ctx.db.insert("messages", {
       userId: args.userId,
       conversationId: args.conversationId,
@@ -97,8 +104,10 @@ export const list = query({
     userId: v.id("users"),
     conversationId: v.optional(v.id("conversations")),
     jobId: v.optional(v.id("jobs")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     if (args.jobId) {
       return await ctx.db
         .query("messages")

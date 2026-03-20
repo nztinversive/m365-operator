@@ -59,6 +59,11 @@ export class JobProcessor {
   private readonly getActiveApiKeyRef = api.userSettings!.getActiveApiKey as unknown as FunctionReference<'query'>;
   private readonly auditLogRef = api.auditLogs!.log as unknown as FunctionReference<'mutation'>;
 
+  /** System token for authenticating worker calls to Convex mutations/queries. */
+  private get systemToken(): string | undefined {
+    return process.env.SYSTEM_TOKEN;
+  }
+
   constructor(
     private convex: ConvexHttpClient,
     private graphManager: GraphClientManager,
@@ -157,6 +162,7 @@ export class JobProcessor {
           await this.convex.mutation(this.updateStatusRef, {
             id: job._id,
             status: 'running',
+            systemToken: this.systemToken,
           });
         } catch (err) {
           console.error(`❌ Heartbeat failed for job ${job._id}:`, err);
@@ -200,6 +206,7 @@ export class JobProcessor {
 
       const activeAiConfig = await this.convex.query(this.getActiveApiKeyRef, {
         userId: job.userId,
+        systemToken: this.systemToken,
       }) as {
         aiProvider?: 'claude_max' | 'claude_api';
         apiKey?: string | null;
@@ -232,6 +239,7 @@ export class JobProcessor {
           // Legacy: all messages for user
           allMessages = await this.convex.query(api.messages.getMessages, {
             userId: job.userId,
+            systemToken: this.systemToken,
           });
         }
         const recentMessages = allMessages ? allMessages.slice(-20) : [];
@@ -398,6 +406,7 @@ export class JobProcessor {
           jobId: job._id,
           role: 'assistant',
           content: result.response,
+          systemToken: this.systemToken,
         });
       }
 
@@ -596,6 +605,7 @@ export class JobProcessor {
     try {
       await this.convex.mutation(this.updateStatusRef, {
         id: jobId, status, output, error, progress, progressMessage,
+        systemToken: this.systemToken,
       });
     } catch (err) {
       console.error(`❌ Failed to update job ${jobId}:`, err);

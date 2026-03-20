@@ -1,6 +1,7 @@
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { verifyUser } from "./lib/auth";
 
 const aiProvider = v.union(v.literal("claude_max"), v.literal("claude_api"));
 
@@ -15,8 +16,9 @@ async function findUserSettings(ctx: QueryCtx | MutationCtx, userId: Id<"users">
 }
 
 export const getSettings = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), systemToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const settings = await findUserSettings(ctx, args.userId);
 
     return {
@@ -36,8 +38,10 @@ export const updateSettings = mutation({
     claudeMaxToken: v.optional(v.string()),
     claudeApiKey: v.optional(v.string()),
     claudeModel: v.optional(v.string()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const existing = await findUserSettings(ctx, args.userId);
     const now = Date.now();
 
@@ -77,8 +81,9 @@ export const updateSettings = mutation({
 });
 
 export const getActiveApiKey = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), systemToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const settings = await findUserSettings(ctx, args.userId);
 
     const selectedProvider = settings?.aiProvider ?? DEFAULT_AI_PROVIDER;

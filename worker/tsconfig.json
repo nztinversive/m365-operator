@@ -9,7 +9,6 @@
     "checkJs": false,
     "jsx": "preserve",
     "declaration": true,
-    "rootDir": "src",
     "outDir": "dist",
     "strict": true,
     "noImplicitAny": false,

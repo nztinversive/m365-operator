@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { verifyUser } from "./lib/auth";
 
 const jobStatus = v.union(
   v.literal("queued"),
@@ -16,8 +17,10 @@ export const createJob = mutation({
     conversationId: v.optional(v.id("conversations")),
     type: v.string(),
     input: v.optional(v.any()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const now = Date.now();
     return await ctx.db.insert("jobs", {
       userId: args.userId,
@@ -63,8 +66,13 @@ export const updateJobStatus = mutation({
     status: jobStatus,
     output: v.optional(v.any()),
     error: v.optional(v.string()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Verify caller owns this job or is the system worker
+    const job = await ctx.db.get(args.id);
+    if (!job) throw new Error("Auth error: job not found.");
+    await verifyUser(ctx, job.userId, args.systemToken);
     const now = Date.now();
     const patchData: Record<string, unknown> = {
       status: args.status,
@@ -136,8 +144,10 @@ export const getJobs = query({
   args: {
     userId: v.id("users"),
     conversationId: v.optional(v.id("conversations")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     if (args.conversationId) {
       return await ctx.db
         .query("jobs")
@@ -157,8 +167,10 @@ export const getJobsPaginated = query({
   args: {
     userId: v.id("users"),
     limit: v.optional(v.number()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const limit = args.limit ?? 25;
     const jobs = await ctx.db
       .query("jobs")
@@ -197,8 +209,10 @@ export const list = query({
   args: {
     userId: v.id("users"),
     conversationId: v.optional(v.id("conversations")),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     if (args.conversationId) {
       return await ctx.db
         .query("jobs")
@@ -230,8 +244,10 @@ export const create = mutation({
     conversationId: v.optional(v.id("conversations")),
     type: v.string(),
     input: v.optional(v.any()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     const now = Date.now();
     return await ctx.db.insert("jobs", {
       userId: args.userId,
@@ -254,8 +270,13 @@ export const updateStatus = mutation({
     error: v.optional(v.string()),
     progress: v.optional(v.number()),
     progressMessage: v.optional(v.string()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Verify caller owns this job or is the system worker
+    const job = await ctx.db.get(args.id);
+    if (!job) throw new Error("Auth error: job not found.");
+    await verifyUser(ctx, job.userId, args.systemToken);
     const now = Date.now();
     const patchData: Record<string, unknown> = {
       status: args.status,

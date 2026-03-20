@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { verifyUser } from "./lib/auth";
 
 async function upsertConnectionRecord(
   ctx: any,
@@ -44,8 +45,10 @@ export const upsertConnection = mutation({
     expiresAt: v.number(),
     email: v.string(),
     displayName: v.optional(v.string()),
+    systemToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await verifyUser(ctx, args.userId, args.systemToken);
     return await upsertConnectionRecord(ctx, args);
   },
 });
